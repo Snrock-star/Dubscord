@@ -5,7 +5,6 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>Dubscord</title>
   
-  <!-- Firebase SDK -->
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
@@ -25,7 +24,7 @@
     }
 
     * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'gg sans', sans-serif; }
-    body, html { height: 100%; width: 100%; background-color: var(--bg-dark); color: var(--text-main); overflow: hidden; }
+    body, html { height: 100%; width: 100%; background-color: var(--bg-dark); color: var(--text-main); overflow: hidden; position: fixed; }
 
     .icon {
       width: 20px; height: 20px; fill: currentColor; display: inline-block;
@@ -88,7 +87,7 @@
     .active-call-banner {
       background: #23a55a; color: #fff; padding: 8px 16px; display: flex;
       align-items: center; justify-content: space-between; font-size: 14px; font-weight: 500;
-      box-shadow: 0 2px 5px rgba(0,0,0,0.2); z-index: 5;
+      box-shadow: 0 2px 5px rgba(0,0,0,0.2); z-index: 5; flex-shrink: 0;
     }
     .active-call-banner .banner-info { display: flex; align-items: center; gap: 8px; }
     .active-call-banner button {
@@ -97,19 +96,17 @@
     }
     .active-call-banner button:hover { background: rgba(255, 255, 255, 0.35); }
 
-    /* Call Box (Floating / Modal) */
-    .call-modal {
-      display: flex; flex-direction: column; align-items: center; justify-content: space-between;
-      height: 380px; width: 100%; max-width: 350px; background: var(--bg-servers); border-radius: 12px; padding: 16px;
-      box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+    /* Floating Call Box Fix (Doesn't block UI) */
+    .call-widget {
+      position: fixed; bottom: 80px; right: 20px; width: 280px; height: 220px;
+      background: var(--bg-servers); border-radius: 12px; padding: 12px;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.6); z-index: 999; display: flex;
+      flex-direction: column; justify-content: space-between; border: 1px solid var(--accent);
     }
-    .call-modal.minimized {
-      position: fixed; bottom: 80px; right: 20px; width: 220px; height: 180px;
-      z-index: 999; padding: 8px; border: 1px solid var(--accent);
+    .call-widget.maximized {
+      top: 50%; left: 50%; transform: translate(-50%, -50%); width: 90%; max-width: 480px; height: 380px;
+      bottom: auto; right: auto;
     }
-    .call-modal.minimized h3 { font-size: 12px; margin-bottom: 4px; }
-    .call-modal.minimized .call-controls { margin-top: 4px; gap: 6px; }
-    .call-modal.minimized .call-ctrl-btn { width: 32px; height: 32px; }
 
     .call-video-container {
       width: 100%; flex: 1; background: #000; border-radius: 8px; overflow: hidden; position: relative;
@@ -117,13 +114,13 @@
     }
     video { width: 100%; height: 100%; object-fit: cover; }
     .local-video-preview {
-      position: absolute; bottom: 8px; right: 8px; width: 80px; height: 60px;
+      position: absolute; bottom: 8px; right: 8px; width: 70px; height: 50px;
       border-radius: 4px; border: 1px solid #fff; overflow: hidden; z-index: 2;
     }
 
-    .call-controls { display: flex; gap: 12px; margin-top: 12px; width: 100%; justify-content: center; }
+    .call-controls { display: flex; gap: 10px; margin-top: 8px; width: 100%; justify-content: center; }
     .call-ctrl-btn {
-      width: 44px; height: 44px; border-radius: 50%; border: none; background: #383a40; color: #fff;
+      width: 36px; height: 36px; border-radius: 50%; border: none; background: #383a40; color: #fff;
       cursor: pointer; display: flex; align-items: center; justify-content: center; transition: 0.2s;
     }
     .call-ctrl-btn:hover { background: #4e5058; }
@@ -131,12 +128,12 @@
 
     /* Mobile Backdrop */
     .mobile-backdrop {
-      display: none; position: fixed; top: 0; left: 72px; right: 0; bottom: 0;
-      background: rgba(0, 0, 0, 0.4); z-index: 8; transition: opacity 0.2s;
+      display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+      background: rgba(0, 0, 0, 0.5); z-index: 8; transition: opacity 0.2s;
     }
     .mobile-backdrop.active { display: block; }
 
-    /* Layout */
+    /* Main Layout Fixes */
     #app { display: flex; height: 100vh; width: 100vw; position: relative; overflow: hidden; }
 
     .servers-sidebar {
@@ -168,10 +165,10 @@
     .icon-btn { cursor: pointer; color: var(--text-muted); padding: 6px; display: flex; align-items: center; justify-content: center; border-radius: 4px; }
     .icon-btn:hover { color: #fff; background: rgba(255,255,255,0.05); }
 
-    .chat-area { flex: 1; display: flex; flex-direction: column; background: var(--bg-chat); min-width: 0; }
+    .chat-area { flex: 1; display: flex; flex-direction: column; background: var(--bg-chat); min-width: 0; height: 100vh; }
     .chat-header {
       height: 48px; border-bottom: 1px solid var(--bg-servers); display: flex; align-items: center;
-      padding: 0 16px; font-weight: bold; color: #fff; justify-content: space-between;
+      padding: 0 16px; font-weight: bold; color: #fff; justify-content: space-between; flex-shrink: 0;
     }
     .chat-actions { display: flex; gap: 8px; align-items: center; }
 
@@ -187,7 +184,8 @@
       border-radius: 4px; margin-top: 6px; text-decoration: none; color: var(--accent); font-size: 14px; border: 1px solid #111;
     }
 
-    .chat-input-container { padding: 0 16px 16px 16px; }
+    /* Fixed Input Field Container */
+    .chat-input-container { padding: 12px 16px; background: var(--bg-chat); flex-shrink: 0; z-index: 5; }
     .chat-input-wrapper { background: #383a40; border-radius: 8px; display: flex; align-items: center; padding: 0 12px; gap: 8px; }
     .file-btn { cursor: pointer; color: var(--text-muted); padding: 4px; display: flex; align-items: center; }
     .file-btn:hover { color: #fff; }
@@ -205,6 +203,7 @@
       .channels-sidebar.open { transform: translateX(0); }
       .members-sidebar { position: absolute; right: 0; top: 0; bottom: 0; width: 220px; transform: translateX(100%); transition: transform 0.25s ease-in-out; }
       .members-sidebar.open { transform: translateX(0); }
+      .call-widget { bottom: 70px; right: 10px; width: 220px; height: 160px; }
     }
   </style>
 </head>
@@ -230,11 +229,10 @@
       <g id="icon-users"><path d="M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5c-1.66 0-3 1.34-3 3s1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5C6.34 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z"/></g>
       <g id="icon-menu"><path d="M3 18h18v-2H3v2zm0-5h18v-2H3v2zm0-7v2h18V6H3z"/></g>
       <g id="icon-plus"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/></g>
-      <g id="icon-minimize"><path d="M19 13H5v-2h14v2z"/></g>
+      <g id="icon-expand"><path d="M7 14H5v5h5v-2H7v-3zm-2-4h2V7h3V5H5v5zm12 7h-3v2h5v-5h-2v3zM14 5v2h3v3h2V5h-5z"/></g>
     </defs>
   </svg>
 
-  <!-- Modal Auth -->
   <div id="authModal" class="modal-overlay">
     <div class="modal">
       <h2>Dubscord</h2>
@@ -263,7 +261,6 @@
     </div>
   </div>
 
-  <!-- Modal Settings -->
   <div id="settingsModal" class="modal-overlay" style="display: none;">
     <div class="modal">
       <h2>Настройки профиля</h2>
@@ -311,7 +308,6 @@
     </div>
   </div>
 
-  <!-- Modal Server -->
   <div id="serverModal" class="modal-overlay" style="display: none;">
     <div class="modal">
       <h2>Сервера</h2>
@@ -324,7 +320,6 @@
     </div>
   </div>
 
-  <!-- Incoming Call Overlay -->
   <div id="incomingCallBox" class="incoming-call-box" style="display: none;">
     <div id="incomingCallText" style="color: #fff; font-weight: bold;">Входящий звонок...</div>
     <div class="incoming-btn-group">
@@ -333,34 +328,28 @@
     </div>
   </div>
 
-  <!-- Call Modal Wrapper -->
-  <div id="callOverlayContainer" class="modal-overlay" style="display: none;">
-    <div id="callModal" class="call-modal">
-      <div style="display: flex; justify-content: space-between; width: 100%; align-items: center; margin-bottom: 8px;">
-        <h3 id="callTitle" style="color: #fff; font-size: 14px;">Звонок...</h3>
-        <button onclick="toggleCallMinimize()" style="background:none; border:none; color:var(--text-muted); cursor:pointer;">
-          <svg class="icon"><use href="#icon-minimize"/></svg>
-        </button>
+  <div id="callWidget" class="call-widget" style="display: none;">
+    <div style="display: flex; justify-content: space-between; width: 100%; align-items: center;">
+      <h3 id="callTitle" style="color: #fff; font-size: 13px;">Звонок...</h3>
+      <button onclick="toggleCallSize()" style="background:none; border:none; color:var(--text-muted); cursor:pointer;">
+        <svg class="icon"><use href="#icon-expand"/></svg>
+      </button>
+    </div>
+    
+    <div class="call-video-container">
+      <video id="remoteVideo" autoplay playsinline></video>
+      <div class="local-video-preview" id="localVideoContainer" style="display: none;">
+        <video id="localVideo" autoplay playsinline muted></video>
       </div>
-      
-      <div class="call-video-container">
-        <video id="remoteVideo" autoplay playsinline></video>
-        <div class="local-video-preview" id="localVideoContainer" style="display: none;">
-          <video id="localVideo" autoplay playsinline muted></video>
-        </div>
-      </div>
+    </div>
 
-      <div class="call-controls">
-        <button id="micBtn" class="call-ctrl-btn" onclick="toggleMuteMic()">
-          <svg class="icon"><use href="#icon-mic"/></svg>
-        </button>
-        <button id="speakerBtn" class="call-ctrl-btn" onclick="toggleAudioOutput()">
-          <svg class="icon"><use href="#icon-speaker"/></svg>
-        </button>
-        <button class="call-ctrl-btn end-call" onclick="endCall(true)">
-          <svg class="icon"><use href="#icon-phone-off"/></svg>
-        </button>
-      </div>
+    <div class="call-controls">
+      <button id="micBtn" class="call-ctrl-btn" onclick="toggleMuteMic()">
+        <svg class="icon"><use href="#icon-mic"/></svg>
+      </button>
+      <button class="call-ctrl-btn end-call" onclick="endCall(true)">
+        <svg class="icon"><use href="#icon-phone-off"/></svg>
+      </button>
     </div>
   </div>
 
@@ -435,7 +424,7 @@
           <svg class="icon" style="animation: pulse 1s infinite;"><use href="#icon-phone"/></svg>
           <span>Идёт звонок... <b id="callTimer">00:00</b></span>
         </div>
-        <button onclick="reopenCallModal()">Открыть окно</button>
+        <button onclick="reopenCallWidget()">Показать окно</button>
       </div>
 
       <div class="chat-messages" id="chatMessages"></div>
@@ -474,7 +463,7 @@
 
     let currentUser = null;
     let currentServerId = 'main';
-    let userServers = JSON.parse(localStorage.getItem('dubscord_servers') || '["main"]');
+    let userServers = ['main'];
     let currentAuthMode = 'login';
 
     let allowCalls = localStorage.getItem('dubscord_allow_calls') !== 'false';
@@ -490,7 +479,6 @@
     let callStartTime = null;
     let callTimerInterval = null;
     let isMicMuted = false;
-    let isCallMinimized = false;
 
     const rtcConfig = {
       iceServers: [
@@ -516,6 +504,7 @@
         currentUser = user;
         document.getElementById('authModal').style.display = 'none';
         initUser();
+        loadUserServers();
       } else {
         currentUser = null;
         document.getElementById('authModal').style.display = 'flex';
@@ -646,9 +635,17 @@
       const name = getUserName();
       document.getElementById('displayUsername').innerText = name;
       document.getElementById('userAvatar').innerText = name.charAt(0).toUpperCase();
-      renderServerList();
       switchServer(currentServerId);
       listenGlobalCalls();
+    }
+
+    function loadUserServers() {
+      if (!currentUser) return;
+      db.ref(`users/${currentUser.uid}/servers`).on('value', (snapshot) => {
+        const serversObj = snapshot.val() || {};
+        userServers = ['main', ...Object.keys(serversObj)];
+        renderServerList();
+      });
     }
 
     function setupPresence() {
@@ -679,33 +676,31 @@
     function closeServerModal() { document.getElementById('serverModal').style.display = 'none'; }
 
     function createNewServer() {
-      const name = document.getElementById('serverInput').value.trim();
+      const rawInput = document.getElementById('serverInput').value.trim();
       const iconEmoji = document.getElementById('serverIconInput').value.trim() || '💬';
-      if (!name) return alert('Введите название!');
-      const newId = 'srv_' + Math.random().toString(36).substr(2, 6);
+      if (!rawInput) return alert('Введите название или ID!');
+      
+      const newId = rawInput.toLowerCase().replace(/[^a-z0-9_-]/g, '') || ('srv_' + Math.random().toString(36).substr(2, 6));
 
-      db.ref(`servers/${newId}/meta`).set({ name: name, icon: iconEmoji, createdBy: getUserName() });
-      if (!userServers.includes(newId)) {
-        userServers.push(newId);
-        localStorage.setItem('dubscord_servers', JSON.stringify(userServers));
+      db.ref(`servers/${newId}/meta`).set({ name: rawInput, icon: iconEmoji, createdBy: getUserName() });
+      if (currentUser) {
+        db.ref(`users/${currentUser.uid}/servers/${newId}`).set(true);
       }
+
       document.getElementById('serverInput').value = '';
       document.getElementById('serverIconInput').value = '';
       closeServerModal();
-      renderServerList();
       switchServer(newId);
     }
 
     function joinServerById() {
       const id = document.getElementById('serverInput').value.trim();
       if (!id) return alert('Введите ID сервера!');
-      if (!userServers.includes(id)) {
-        userServers.push(id);
-        localStorage.setItem('dubscord_servers', JSON.stringify(userServers));
+      if (currentUser) {
+        db.ref(`users/${currentUser.uid}/servers/${id}`).set(true);
       }
       document.getElementById('serverInput').value = '';
       closeServerModal();
-      renderServerList();
       switchServer(id);
     }
 
@@ -713,8 +708,9 @@
       if (currentServerId === 'main') return alert('Основной сервер нельзя удалить!');
       if (confirm('Удалить этот сервер?')) {
         db.ref(`servers/${currentServerId}`).remove();
-        userServers = userServers.filter(id => id !== currentServerId);
-        localStorage.setItem('dubscord_servers', JSON.stringify(userServers));
+        if (currentUser) {
+          db.ref(`users/${currentUser.uid}/servers/${currentServerId}`).remove();
+        }
         switchServer('main');
       }
     }
@@ -730,7 +726,7 @@
         
         db.ref(`servers/${srvId}/meta`).once('value', (s) => {
           const meta = s.val() || {};
-          icon.innerText = meta.icon || srvId.substr(4, 2).toUpperCase();
+          icon.innerText = meta.icon || srvId.substr(0, 2).toUpperCase();
           if (meta.name) icon.title = `${meta.name} (ID: ${srvId})`;
         });
 
@@ -760,7 +756,7 @@
         deleteBtn.style.display = 'flex';
         db.ref(`servers/${serverId}/meta`).once('value', (s) => {
           const meta = s.val() || {};
-          document.getElementById('currentServerName').innerText = `${meta.icon || ''} ${meta.name || 'Сервер'}`;
+          document.getElementById('currentServerName').innerText = `${meta.icon || ''} ${meta.name || serverId}`;
         });
       }
 
@@ -843,7 +839,7 @@
       e.target.value = '';
     }
 
-    /* WebRTC signaling & Global Call Handlers */
+    /* WebRTC Signaling */
     function listenGlobalCalls() {
       db.ref(`global_calls`).on('child_added', (snapshot) => {
         const call = snapshot.val();
@@ -858,270 +854,3 @@
       db.ref(`global_calls`).on('child_removed', (snapshot) => {
         if (activeIncomingCall && activeIncomingCall.key === snapshot.key) {
           declineIncomingCall();
-        }
-      });
-    }
-
-    async function setupPeerConnection(callRef) {
-      peerConnection = new RTCPeerConnection(rtcConfig);
-      remoteStream = new MediaStream();
-      document.getElementById('remoteVideo').srcObject = remoteStream;
-
-      localStream.getTracks().forEach(track => peerConnection.addTrack(track, localStream));
-
-      peerConnection.ontrack = (event) => {
-        event.streams[0].getTracks().forEach(track => remoteStream.addTrack(track));
-      };
-
-      const callerCandidatesRef = callRef.child('callerCandidates');
-      const calleeCandidatesRef = callRef.child('calleeCandidates');
-
-      peerConnection.onicecandidate = (event) => {
-        if (event.candidate) {
-          if (currentCallSessionRef) {
-            const candidateRef = (currentCallSessionRef.isCaller) ? callerCandidatesRef : calleeCandidatesRef;
-            candidateRef.push(event.candidate.toJSON());
-          }
-        }
-      };
-    }
-
-    async function startCall(type) {
-      currentCallType = type;
-      showCallUI(type);
-
-      try {
-        localStream = await navigator.mediaDevices.getUserMedia({ audio: true, video: type === 'video' });
-        
-        if (type === 'video') {
-          document.getElementById('localVideo').srcObject = localStream;
-          document.getElementById('localVideoContainer').style.display = 'block';
-        } else {
-          document.getElementById('localVideoContainer').style.display = 'none';
-        }
-
-        const callRef = db.ref('global_calls').push();
-        currentCallSessionRef = callRef;
-        currentCallSessionRef.isCaller = true;
-
-        await setupPeerConnection(callRef);
-
-        const offer = await peerConnection.createOffer();
-        await peerConnection.setLocalDescription(offer);
-
-        await callRef.set({
-          caller: getUserName(),
-          serverId: currentServerId,
-          type: type,
-          offer: { type: offer.type, sdp: offer.sdp }
-        });
-
-        callRef.child('answer').on('value', async (snapshot) => {
-          const answer = snapshot.val();
-          if (answer && !peerConnection.currentRemoteDescription) {
-            await peerConnection.setRemoteDescription(new RTCSessionDescription(answer));
-          }
-        });
-
-        callRef.child('calleeCandidates').on('child_added', (snapshot) => {
-          const candidate = new RTCIceCandidate(snapshot.val());
-          peerConnection.addIceCandidate(candidate);
-        });
-
-        startCallTimer();
-        sendMessage(`Начал(а) ${type === 'video' ? 'видеозвонок' : 'голосовой звонок'}`, null, true);
-
-      } catch (err) {
-        alert('Ошибка доступа к устройствам ввода: ' + err.message);
-        endCall(false);
-      }
-    }
-
-    async function acceptIncomingCall() {
-      document.getElementById('incomingCallBox').style.display = 'none';
-      if (!activeIncomingCall) return;
-
-      if (activeIncomingCall.serverId !== currentServerId) {
-        switchServer(activeIncomingCall.serverId);
-      }
-
-      const type = activeIncomingCall.type;
-      currentCallType = type;
-      showCallUI(type);
-
-      try {
-        localStream = await navigator.mediaDevices.getUserMedia({ audio: true, video: type === 'video' });
-
-        if (type === 'video') {
-          document.getElementById('localVideo').srcObject = localStream;
-          document.getElementById('localVideoContainer').style.display = 'block';
-        } else {
-          document.getElementById('localVideoContainer').style.display = 'none';
-        }
-
-        const callRef = db.ref(`global_calls/${activeIncomingCall.key}`);
-        currentCallSessionRef = callRef;
-        currentCallSessionRef.isCaller = false;
-
-        await setupPeerConnection(callRef);
-
-        callRef.child('offer').once('value', async (snapshot) => {
-          const offer = snapshot.val();
-          if (offer) {
-            await peerConnection.setRemoteDescription(new RTCSessionDescription(offer));
-            const answer = await peerConnection.createAnswer();
-            await peerConnection.setLocalDescription(answer);
-
-            await callRef.child('answer').set({ type: answer.type, sdp: answer.sdp });
-          }
-        });
-
-        callRef.child('callerCandidates').on('child_added', (snapshot) => {
-          const candidate = new RTCIceCandidate(snapshot.val());
-          peerConnection.addIceCandidate(candidate);
-        });
-
-        startCallTimer();
-
-      } catch (err) {
-        alert('Не удалось подключиться к вызову: ' + err.message);
-        endCall(false);
-      }
-    }
-
-    function showCallUI(type) {
-      const container = document.getElementById('callOverlayContainer');
-      const modal = document.getElementById('callModal');
-      container.style.display = 'flex';
-      modal.classList.remove('minimized');
-      isCallMinimized = false;
-      document.getElementById('callTitle').innerText = type === 'video' ? 'Видеозвонок...' : 'Голосовой звонок...';
-    }
-
-    function toggleCallMinimize() {
-      const container = document.getElementById('callOverlayContainer');
-      const modal = document.getElementById('callModal');
-      
-      isCallMinimized = !isCallMinimized;
-      if (isCallMinimized) {
-        container.style.display = 'block';
-        container.classList.remove('modal-overlay');
-        modal.classList.add('minimized');
-      } else {
-        container.style.display = 'flex';
-        container.classList.add('modal-overlay');
-        modal.classList.remove('minimized');
-      }
-    }
-
-    function startCallTimer() {
-      callStartTime = Date.now();
-      document.getElementById('activeCallBanner').style.display = 'flex';
-      if (callTimerInterval) clearInterval(callTimerInterval);
-
-      callTimerInterval = setInterval(() => {
-        const diff = Math.floor((Date.now() - callStartTime) / 1000);
-        const m = String(Math.floor(diff / 60)).padStart(2, '0');
-        const s = String(diff % 60).padStart(2, '0');
-        document.getElementById('callTimer').innerText = `${m}:${s}`;
-      }, 1000);
-    }
-
-    function reopenCallModal() {
-      showCallUI(currentCallType || 'audio');
-    }
-
-    function declineIncomingCall() {
-      document.getElementById('incomingCallBox').style.display = 'none';
-      if (!peerConnection) {
-        document.getElementById('activeCallBanner').style.display = 'none';
-      }
-      activeIncomingCall = null;
-    }
-
-    function toggleMuteMic() {
-      if (!localStream) return;
-      isMicMuted = !isMicMuted;
-      localStream.getAudioTracks().forEach(track => { track.enabled = !isMicMuted; });
-      const micBtn = document.getElementById('micBtn');
-      micBtn.querySelector('use').setAttribute('href', isMicMuted ? '#icon-mic-off' : '#icon-mic');
-      micBtn.classList.toggle('active', isMicMuted);
-    }
-
-    async function toggleAudioOutput() {
-      // Использование встроенного спикерфона браузера по умолчанию
-    }
-
-    function endCall(sendNotify = true) {
-      if (peerConnection) {
-        peerConnection.close();
-        peerConnection = null;
-      }
-
-      if (localStream) {
-        localStream.getTracks().forEach(track => track.stop());
-        localStream = null;
-      }
-
-      if (currentCallSessionRef) {
-        currentCallSessionRef.remove();
-        currentCallSessionRef = null;
-      }
-
-      if (callTimerInterval) {
-        clearInterval(callTimerInterval);
-        callTimerInterval = null;
-      }
-
-      const container = document.getElementById('callOverlayContainer');
-      container.style.display = 'none';
-      container.classList.add('modal-overlay');
-      document.getElementById('activeCallBanner').style.display = 'none';
-
-      if (sendNotify && currentCallType) {
-        sendMessage(`Завершил(а) ${currentCallType === 'video' ? 'видеозвонок' : 'звонок'}`, null, true);
-        currentCallType = null;
-      }
-    }
-
-    function playBeepSound() {
-      try {
-        const ctx = new (window.AudioContext || window.webkitAudioContext)();
-        const osc = ctx.createOscillator();
-        osc.connect(ctx.destination);
-        osc.frequency.value = 800;
-        osc.start();
-        osc.stop(ctx.currentTime + 0.15);
-      } catch(e) {}
-    }
-
-    function toggleMobileSidebar() {
-      const sidebar = document.getElementById('channelsSidebar');
-      const backdrop = document.getElementById('mobileBackdrop');
-      document.getElementById('membersSidebar').classList.remove('open');
-      sidebar.classList.toggle('open');
-      backdrop.classList.toggle('active', sidebar.classList.contains('open'));
-    }
-
-    function toggleMobileMembers() {
-      const members = document.getElementById('membersSidebar');
-      const backdrop = document.getElementById('mobileBackdrop');
-      document.getElementById('channelsSidebar').classList.remove('open');
-      members.classList.toggle('open');
-      backdrop.classList.toggle('active', members.classList.contains('open'));
-    }
-
-    function closeMobileDrawers() {
-      document.getElementById('channelsSidebar').classList.remove('open');
-      document.getElementById('membersSidebar').classList.remove('open');
-      document.getElementById('mobileBackdrop').classList.remove('active');
-    }
-
-    function escapeHtml(text) {
-      const div = document.createElement('div');
-      div.innerText = text;
-      return div.innerHTML;
-    }
-  </script>
-</body>
-</html>
