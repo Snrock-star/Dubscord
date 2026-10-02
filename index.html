@@ -5,9 +5,11 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>Dubscord</title>
   
+  <!-- Firebase SDK -->
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-storage-compat.js"></script>
 
   <style>
     :root {
@@ -24,11 +26,16 @@
     }
 
     * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'gg sans', sans-serif; }
-    body, html { height: 100%; width: 100%; background-color: var(--bg-dark); color: var(--text-main); overflow: hidden; position: fixed; }
+    body, html { height: 100%; width: 100%; background-color: var(--bg-dark); color: var(--text-main); overflow: hidden; }
 
+    /* Custom SVG Icons helper */
     .icon {
-      width: 20px; height: 20px; fill: currentColor; display: inline-block;
-      vertical-align: middle; flex-shrink: 0;
+      width: 20px;
+      height: 20px;
+      fill: currentColor;
+      display: inline-block;
+      vertical-align: middle;
+      flex-shrink: 0;
     }
 
     /* Modals */
@@ -83,11 +90,11 @@
     .btn-accept { background: var(--online) !important; width: auto !important; padding: 8px 16px !important; color:#fff; border:none; border-radius:4px; cursor:pointer; font-weight:bold; }
     .btn-decline { background: var(--danger) !important; width: auto !important; padding: 8px 16px !important; color:#fff; border:none; border-radius:4px; cursor:pointer; font-weight:bold; }
 
-    /* Banner under Header */
+    /* Call Banner under Chat Header */
     .active-call-banner {
       background: #23a55a; color: #fff; padding: 8px 16px; display: flex;
       align-items: center; justify-content: space-between; font-size: 14px; font-weight: 500;
-      box-shadow: 0 2px 5px rgba(0,0,0,0.2); z-index: 5; flex-shrink: 0;
+      box-shadow: 0 2px 5px rgba(0,0,0,0.2); animation: fadeIn 0.3s;
     }
     .active-call-banner .banner-info { display: flex; align-items: center; gap: 8px; }
     .active-call-banner button {
@@ -96,44 +103,29 @@
     }
     .active-call-banner button:hover { background: rgba(255, 255, 255, 0.35); }
 
-    /* Floating Call Box Fix (Doesn't block UI) */
-    .call-widget {
-      position: fixed; bottom: 80px; right: 20px; width: 280px; height: 220px;
-      background: var(--bg-servers); border-radius: 12px; padding: 12px;
-      box-shadow: 0 10px 30px rgba(0,0,0,0.6); z-index: 999; display: flex;
-      flex-direction: column; justify-content: space-between; border: 1px solid var(--accent);
+    /* Call Modal & Controls */
+    .call-modal {
+      display: flex; flex-direction: column; align-items: center; justify-content: space-between;
+      height: 380px; width: 100%; max-width: 350px; background: var(--bg-servers); border-radius: 12px; padding: 20px;
     }
-    .call-widget.maximized {
-      top: 50%; left: 50%; transform: translate(-50%, -50%); width: 90%; max-width: 480px; height: 380px;
-      bottom: auto; right: auto;
-    }
-
-    .call-video-container {
-      width: 100%; flex: 1; background: #000; border-radius: 8px; overflow: hidden; position: relative;
-      display: flex; justify-content: center; align-items: center;
-    }
+    .call-video-container { width: 100%; height: 180px; background: #000; border-radius: 8px; overflow: hidden; position: relative; }
     video { width: 100%; height: 100%; object-fit: cover; }
-    .local-video-preview {
-      position: absolute; bottom: 8px; right: 8px; width: 70px; height: 50px;
-      border-radius: 4px; border: 1px solid #fff; overflow: hidden; z-index: 2;
-    }
-
-    .call-controls { display: flex; gap: 10px; margin-top: 8px; width: 100%; justify-content: center; }
+    .call-controls { display: flex; gap: 12px; margin-top: 16px; width: 100%; justify-content: center; }
     .call-ctrl-btn {
-      width: 36px; height: 36px; border-radius: 50%; border: none; background: #383a40; color: #fff;
+      width: 48px; height: 48px; border-radius: 50%; border: none; background: #383a40; color: #fff;
       cursor: pointer; display: flex; align-items: center; justify-content: center; transition: 0.2s;
     }
     .call-ctrl-btn:hover { background: #4e5058; }
     .call-ctrl-btn.active, .call-ctrl-btn.end-call { background: var(--danger); }
 
-    /* Mobile Backdrop */
+    /* Mobile Backdrop Fix */
     .mobile-backdrop {
-      display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0;
-      background: rgba(0, 0, 0, 0.5); z-index: 8; transition: opacity 0.2s;
+      display: none; position: fixed; top: 0; left: 72px; right: 0; bottom: 0;
+      background: rgba(0, 0, 0, 0.4); z-index: 8; transition: opacity 0.2s;
     }
     .mobile-backdrop.active { display: block; }
 
-    /* Main Layout Fixes */
+    /* Layout */
     #app { display: flex; height: 100vh; width: 100vw; position: relative; overflow: hidden; }
 
     .servers-sidebar {
@@ -165,10 +157,10 @@
     .icon-btn { cursor: pointer; color: var(--text-muted); padding: 6px; display: flex; align-items: center; justify-content: center; border-radius: 4px; }
     .icon-btn:hover { color: #fff; background: rgba(255,255,255,0.05); }
 
-    .chat-area { flex: 1; display: flex; flex-direction: column; background: var(--bg-chat); min-width: 0; height: 100vh; }
+    .chat-area { flex: 1; display: flex; flex-direction: column; background: var(--bg-chat); min-width: 0; }
     .chat-header {
       height: 48px; border-bottom: 1px solid var(--bg-servers); display: flex; align-items: center;
-      padding: 0 16px; font-weight: bold; color: #fff; justify-content: space-between; flex-shrink: 0;
+      padding: 0 16px; font-weight: bold; color: #fff; justify-content: space-between;
     }
     .chat-actions { display: flex; gap: 8px; align-items: center; }
 
@@ -184,8 +176,7 @@
       border-radius: 4px; margin-top: 6px; text-decoration: none; color: var(--accent); font-size: 14px; border: 1px solid #111;
     }
 
-    /* Fixed Input Field Container */
-    .chat-input-container { padding: 12px 16px; background: var(--bg-chat); flex-shrink: 0; z-index: 5; }
+    .chat-input-container { padding: 0 16px 16px 16px; }
     .chat-input-wrapper { background: #383a40; border-radius: 8px; display: flex; align-items: center; padding: 0 12px; gap: 8px; }
     .file-btn { cursor: pointer; color: var(--text-muted); padding: 4px; display: flex; align-items: center; }
     .file-btn:hover { color: #fff; }
@@ -203,20 +194,22 @@
       .channels-sidebar.open { transform: translateX(0); }
       .members-sidebar { position: absolute; right: 0; top: 0; bottom: 0; width: 220px; transform: translateX(100%); transition: transform 0.25s ease-in-out; }
       .members-sidebar.open { transform: translateX(0); }
-      .call-widget { bottom: 70px; right: 10px; width: 220px; height: 160px; }
     }
   </style>
 </head>
 <body>
 
+  <!-- Background overlay for mobile drawers -->
   <div id="mobileBackdrop" class="mobile-backdrop" onclick="closeMobileDrawers()"></div>
 
+  <!-- SVG Icons Repository -->
   <svg style="display:none;">
     <defs>
       <g id="icon-home"><path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"/></g>
       <g id="icon-eye"><path d="M12 4.5C7 4.5 2.73 7.61 1 12c1.73 4.39 6 7.5 11 7.5s9.27-3.11 11-7.5c-1.73-4.39-6-7.5-11-7.5zM12 17c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5zm0-8c-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3-1.34-3-3-3z"/></g>
       <g id="icon-eye-off"><path d="M12 7c2.76 0 5 2.24 5 5 0 .65-.13 1.26-.36 1.83l2.92 2.92c1.51-1.26 2.7-2.89 3.44-4.75-1.73-4.39-6-7.5-11-7.5-1.4 0-2.74.25-3.98.7l2.16 2.16C10.74 7.13 11.35 7 12 7zM2 4.27l2.28 2.28.46.46C3.08 8.3 1.78 10.02 1 12c1.73 4.39 6 7.5 11 7.5 1.55 0 3.03-.3 4.38-.84l.42.42L19.73 22 21 20.73 3.27 3 2 4.27zM7.53 9.8l1.55 1.55c-.05.21-.08.43-.08.65 0 1.66 1.34 3 3 3 .22 0 .44-.03.65-.08l1.55 1.55c-.67.33-1.41.53-2.2.53-2.76 0-5-2.24-5-5 0-.79.2-1.53.53-2.20z"/></g>
       <g id="icon-phone"><path d="M6.62 10.79c1.44 2.83 3.76 5.14 6.59 6.59l2.2-2.2c.27-.27.67-.36 1.02-.24 1.12.37 2.33.57 3.57.57.55 0 1 .45 1 1V20c0 .55-.45 1-1 1-9.39 0-17-7.61-17-17 0-.55.45-1 1-1h3.5c.55 0 1 .45 1 1 0 1.25.2 2.45.57 3.57.11.35.03.74-.25 1.02l-2.2 2.2z"/></g>
+      <!-- Исправленный правильный SVG сброса звонка -->
       <g id="icon-phone-off"><path d="M12 3c-4.97 0-9 4.03-9 9 0 2.12.74 4.07 1.97 5.61L4.35 20.2c-.39.39-.39 1.02 0 1.41.39.39 1.02.39 1.41 0l2.59-2.59C9.89 19.63 10.91 20 12 20c4.97 0 9-4.03 9-9 0-1.09-.37-2.11-.98-2.95l-1.45 1.45C18.84 10.2 19 11.08 19 12c0 3.87-3.13 7-7 7-1.08 0-2.09-.25-3-.68l1.62-1.62c.44.19.92.3 1.38.3 2.21 0 4-1.79 4-4 0-.46-.11-.94-.3-1.38l1.62-1.62c.43.91.68 1.92.68 3 0 3.87-3.13 7-7 7zM4.27 3L3 4.27l3.11 3.11C4.8 8.83 4 10.32 4 12c0 4.41 3.59 8 8 8 1.68 0 3.17-.8 4.62-2.11L19.73 21 21 19.73 4.27 3zm8.73 13c-2.21 0-4-1.79-4-4 0-.58.13-1.13.36-1.63l5.27 5.27c-.5.23-1.05.36-1.63.36z"/></g>
       <g id="icon-video"><path d="M17 10.5V7c0-.55-.45-1-1-1H4c-.55 0-1 .45-1 1v10c0 .55.45 1 1 1h12c.55 0 1-.45 1-1v-3.5l4 4v-11l-4 4z"/></g>
       <g id="icon-mic"><path d="M12 14c1.66 0 2.99-1.34 2.99-3L15 5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3zm5.3-3c0 3-2.54 5.1-5.3 5.1S6.7 14 6.7 11H5c0 3.41 2.72 6.23 6 6.72V21h2v-3.28c3.28-.48 6-3.3 6-6.72h-1.7z"/></g>
@@ -229,10 +222,10 @@
       <g id="icon-users"><path d="M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5c-1.66 0-3 1.34-3 3s1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5C6.34 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z"/></g>
       <g id="icon-menu"><path d="M3 18h18v-2H3v2zm0-5h18v-2H3v2zm0-7v2h18V6H3z"/></g>
       <g id="icon-plus"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/></g>
-      <g id="icon-expand"><path d="M7 14H5v5h5v-2H7v-3zm-2-4h2V7h3V5H5v5zm12 7h-3v2h5v-5h-2v3zM14 5v2h3v3h2V5h-5z"/></g>
     </defs>
   </svg>
 
+  <!-- Modal Auth -->
   <div id="authModal" class="modal-overlay">
     <div class="modal">
       <h2>Dubscord</h2>
@@ -241,26 +234,22 @@
         <button id="tabRegister" class="tab-btn" onclick="switchAuthTab('register')">Регистрация</button>
       </div>
       
-      <div id="regUsernameBox" style="display: none;">
-        <input type="text" id="authUsername" placeholder="Ваш никнейм..." maxlength="20" autocomplete="off">
-      </div>
-      
-      <input type="email" id="authEmail" placeholder="Ваш Email..." autocomplete="off">
+      <input type="text" id="authUsername" placeholder="Ваш никнейм..." maxlength="20" autocomplete="nickname">
+      <input type="email" id="authEmail" placeholder="Email..." autocomplete="email">
       
       <div class="password-wrapper">
-        <input type="password" id="authPassword" placeholder="Пароль..." autocomplete="off">
+        <input type="password" id="authPassword" placeholder="Пароль..." autocomplete="current-password">
         <button type="button" class="toggle-password-btn" onclick="togglePasswordVisibility('authPassword', this)" title="Показать/скрыть">
           <svg class="icon"><use href="#icon-eye"/></svg>
         </button>
       </div>
 
+      <a id="forgotPasswordLink" class="forgot-link" onclick="sendPasswordReset()">Забыли пароль?</a>
       <button id="authSubmitBtn" class="action-btn" onclick="handleAuth()">Войти</button>
-      <div>
-        <a class="forgot-link" id="forgotPwdBtn" onclick="resetPassword()">Забыли пароль?</a>
-      </div>
     </div>
   </div>
 
+  <!-- Modal Settings -->
   <div id="settingsModal" class="modal-overlay" style="display: none;">
     <div class="modal">
       <h2>Настройки профиля</h2>
@@ -280,14 +269,8 @@
       <button class="action-btn" onclick="updateUsername()">Сохранить никнейм</button>
 
       <h3>Изменить Email</h3>
-      <input type="email" id="editEmail" placeholder="Новый Email">
-      <div class="password-wrapper">
-        <input type="password" id="confirmPwdForEmail" placeholder="Текущий пароль для подтверждения">
-        <button type="button" class="toggle-password-btn" onclick="togglePasswordVisibility('confirmPwdForEmail', this)">
-          <svg class="icon"><use href="#icon-eye"/></svg>
-        </button>
-      </div>
-      <button class="action-btn" onclick="updateEmail()">Обновить Email</button>
+      <input type="email" id="editEmail" placeholder="Новый email" autocomplete="email">
+      <button class="action-btn" onclick="updateEmail()">Сохранить email</button>
 
       <h3>Изменить Пароль</h3>
       <div class="password-wrapper">
@@ -304,10 +287,15 @@
       </div>
       <button class="action-btn" onclick="updatePassword()">Обновить Пароль</button>
 
+      <h3 style="color:var(--danger);">Удаление аккаунта</h3>
+      <p style="color:var(--text-muted); font-size:13px; line-height:1.4;">Аккаунт будет удалён без возможности восстановления. Ваши созданные серверы тоже будут удалены.</p>
+      <button class="action-btn" onclick="deleteOwnAccount()" style="background:var(--danger);">Удалить мой аккаунт</button>
+
       <button class="action-btn" onclick="closeSettingsModal()" style="background: transparent; color: var(--text-muted); margin-top: 12px;">Закрыть</button>
     </div>
   </div>
 
+  <!-- Modal Server -->
   <div id="serverModal" class="modal-overlay" style="display: none;">
     <div class="modal">
       <h2>Сервера</h2>
@@ -320,6 +308,18 @@
     </div>
   </div>
 
+  <!-- Modal Edit Server -->
+  <div id="editServerModal" class="modal-overlay" style="display: none;">
+    <div class="modal">
+      <h2>Редактировать сервер</h2>
+      <input type="text" id="editServerName" placeholder="Название сервера">
+      <input type="text" id="editServerIcon" placeholder="Смайлик сервера (например: 🎮)" maxlength="2" style="text-align:center; font-size:18px;">
+      <button class="action-btn" onclick="saveServerEdits()">Сохранить изменения</button>
+      <button class="action-btn" onclick="closeEditServerModal()" style="background: transparent; color: var(--text-muted); margin-top: 8px;">Отмена</button>
+    </div>
+  </div>
+
+  <!-- Incoming Call Overlay -->
   <div id="incomingCallBox" class="incoming-call-box" style="display: none;">
     <div id="incomingCallText" style="color: #fff; font-weight: bold;">Входящий звонок...</div>
     <div class="incoming-btn-group">
@@ -328,35 +328,34 @@
     </div>
   </div>
 
-  <div id="callWidget" class="call-widget" style="display: none;">
-    <div style="display: flex; justify-content: space-between; width: 100%; align-items: center;">
-      <h3 id="callTitle" style="color: #fff; font-size: 13px;">Звонок...</h3>
-      <button onclick="toggleCallSize()" style="background:none; border:none; color:var(--text-muted); cursor:pointer;">
-        <svg class="icon"><use href="#icon-expand"/></svg>
-      </button>
-    </div>
-    
-    <div class="call-video-container">
-      <video id="remoteVideo" autoplay playsinline></video>
-      <div class="local-video-preview" id="localVideoContainer" style="display: none;">
-        <video id="localVideo" autoplay playsinline muted></video>
+  <!-- Call Modal -->
+  <div id="callModal" class="modal-overlay" style="display: none;">
+    <div class="call-modal">
+      <h3 id="callTitle" style="color: #fff;">Звонок...</h3>
+      <div class="call-video-container">
+        <video id="remoteVideo" autoplay playsinline></video>
+        <audio id="remoteAudio" autoplay></audio>
       </div>
-    </div>
-
-    <div class="call-controls">
-      <button id="micBtn" class="call-ctrl-btn" onclick="toggleMuteMic()">
-        <svg class="icon"><use href="#icon-mic"/></svg>
-      </button>
-      <button class="call-ctrl-btn end-call" onclick="endCall(true)">
-        <svg class="icon"><use href="#icon-phone-off"/></svg>
-      </button>
+      <div class="call-controls">
+        <button id="micBtn" class="call-ctrl-btn" onclick="toggleMuteMic()">
+          <svg class="icon"><use href="#icon-mic"/></svg>
+        </button>
+        <button id="speakerBtn" class="call-ctrl-btn" onclick="toggleAudioOutput()">
+          <svg class="icon"><use href="#icon-speaker"/></svg>
+        </button>
+        <button class="call-ctrl-btn end-call" onclick="endCall(true)">
+          <svg class="icon"><use href="#icon-phone-off"/></svg>
+        </button>
+      </div>
     </div>
   </div>
 
   <input type="file" id="fileInput" style="display: none;" onchange="handleFileUpload(event)">
 
   <div id="app">
+    <!-- Server Sidebar -->
     <div class="servers-sidebar">
+      <!-- Иконка Главного Сервера - Домик -->
       <div class="server-icon active" id="server-btn-main" onclick="switchServer('main')" title="Главный Сервер">
         <svg class="icon" style="width:24px; height:24px;"><use href="#icon-home"/></svg>
       </div>
@@ -367,14 +366,20 @@
       </div>
     </div>
 
+    <!-- Channels Sidebar -->
     <div class="channels-sidebar" id="channelsSidebar">
       <div class="server-header">
         <div>
           <div id="currentServerName">Основной #1</div>
           <div class="server-id-badge" id="currentServerId">ID: main</div>
         </div>
-        <div class="delete-srv-btn icon-btn" id="deleteServerBtn" onclick="deleteCurrentServer()" title="Удалить сервер">
-          <svg class="icon" style="color:var(--danger)"><use href="#icon-trash"/></svg>
+        <div style="display:flex; gap:2px;">
+          <div class="icon-btn" id="editServerBtn" onclick="openEditServerModal()" title="Редактировать сервер" style="display:none;">
+            <svg class="icon"><use href="#icon-settings"/></svg>
+          </div>
+          <div class="delete-srv-btn icon-btn" id="deleteServerBtn" onclick="leaveCurrentServer()" title="Удалить сервер">
+            <svg class="icon" style="color:var(--danger)"><use href="#icon-trash"/></svg>
+          </div>
         </div>
       </div>
       <div style="padding: 16px; color: var(--text-muted); font-size: 14px;">💬 Общий чат</div>
@@ -398,6 +403,7 @@
       </div>
     </div>
 
+    <!-- Chat Area -->
     <div class="chat-area">
       <div class="chat-header">
         <div style="display: flex; align-items: center; gap: 8px;">
@@ -419,12 +425,13 @@
         </div>
       </div>
 
+      <!-- Call Banner under Header -->
       <div id="activeCallBanner" class="active-call-banner" style="display: none;">
         <div class="banner-info">
           <svg class="icon" style="animation: pulse 1s infinite;"><use href="#icon-phone"/></svg>
           <span>Идёт звонок... <b id="callTimer">00:00</b></span>
         </div>
-        <button onclick="reopenCallWidget()">Показать окно</button>
+        <button onclick="reopenCallModal()">Открыть окно</button>
       </div>
 
       <div class="chat-messages" id="chatMessages"></div>
@@ -439,6 +446,7 @@
       </div>
     </div>
 
+    <!-- Members Sidebar -->
     <div class="members-sidebar" id="membersSidebar">
       <div style="font-size:12px; font-weight:bold; color:var(--text-muted); margin-bottom:8px;">В СЕТИ — <span id="onlineCount">0</span></div>
       <div id="membersList"></div>
@@ -460,30 +468,56 @@
     firebase.initializeApp(firebaseConfig);
     const auth = firebase.auth();
     const db = firebase.database();
+    const storage = firebase.storage();
 
     let currentUser = null;
     let currentServerId = 'main';
-    let userServers = ['main'];
+    let userServers = [];
+
+    function getServersStorageKey() {
+      return currentUser ? `dubscord_servers_${currentUser.uid}` : 'dubscord_servers_guest';
+    }
+
+    function loadUserServers() {
+      try {
+        userServers = JSON.parse(localStorage.getItem(getServersStorageKey()) || '["main"]');
+      } catch (e) {
+        userServers = ['main'];
+      }
+      if (!userServers.includes('main')) userServers.unshift('main');
+    }
+
+    function saveUserServers() {
+      localStorage.setItem(getServersStorageKey(), JSON.stringify(userServers));
+    }
     let currentAuthMode = 'login';
 
     let allowCalls = localStorage.getItem('dubscord_allow_calls') !== 'false';
     let allowNotifications = localStorage.getItem('dubscord_allow_notifs') !== 'false';
 
-    /* WebRTC & Calls State */
-    let peerConnection = null;
     let localStream = null;
     let remoteStream = null;
-    let currentCallSessionRef = null;
+    let peerConnection = null;
+    let currentCallId = null;
+    let currentCallRole = null;
+    let isMicMuted = false;
+    let isSpeakerPhone = true;
     let activeIncomingCall = null;
     let currentCallType = null;
     let callStartTime = null;
     let callTimerInterval = null;
-    let isMicMuted = false;
+    let callStatusRef = null;
+    let callStatusHandler = null;
+    let callerCandidateHandler = null;
+    let calleeCandidateHandler = null;
+    let answerHandler = null;
+    let globalCallsHandlers = {};
+    let currentCallServerId = null;
 
     const rtcConfig = {
       iceServers: [
-        { urls: 'stun:stun.l.google.com:19020' },
-        { urls: 'stun:stun1.l.google.com:19020' }
+        { urls: 'stun:stun.l.google.com:19302' },
+        { urls: 'stun:stun1.l.google.com:19302' }
       ]
     };
 
@@ -499,60 +533,112 @@
       }
     }
 
+    switchAuthTab('login');
+
     auth.onAuthStateChanged((user) => {
       if (user) {
         currentUser = user;
         document.getElementById('authModal').style.display = 'none';
         initUser();
-        loadUserServers();
       } else {
         currentUser = null;
         document.getElementById('authModal').style.display = 'flex';
       }
     });
 
+    function normalizeUsername(name) {
+      return name.trim().replace(/\s+/g, ' ').toLowerCase();
+    }
+
+    function normalizeUsername(name) {
+      return name.trim().replace(/\s+/g, ' ').toLowerCase();
+    }
+
+    function isValidEmail(email) {
+      return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+    }
+
     function switchAuthTab(mode) {
       currentAuthMode = mode;
       document.getElementById('tabLogin').classList.toggle('active', mode === 'login');
       document.getElementById('tabRegister').classList.toggle('active', mode === 'register');
-      document.getElementById('regUsernameBox').style.display = mode === 'register' ? 'block' : 'none';
-      document.getElementById('forgotPwdBtn').style.display = mode === 'login' ? 'inline-block' : 'none';
       document.getElementById('authSubmitBtn').innerText = mode === 'login' ? 'Войти' : 'Зарегистрироваться';
+      document.getElementById('authEmail').placeholder = mode === 'login' ? 'Email или старый никнейм...' : 'Email...';
+      document.getElementById('authUsername').style.display = mode === 'register' ? 'block' : 'none';
+      document.getElementById('authPassword').autocomplete = mode === 'login' ? 'current-password' : 'new-password';
+      document.getElementById('forgotPasswordLink').style.display = mode === 'login' ? 'inline-block' : 'none';
     }
 
-    function handleAuth() {
-      const email = document.getElementById('authEmail').value.trim();
-      const password = document.getElementById('authPassword').value.trim();
-
-      if (!email || !password) return alert('Заполните Email и пароль!');
+    async function handleAuth() {
+      const username = document.getElementById('authUsername').value.trim();
+      const emailInput = document.getElementById('authEmail').value.trim();
+      const password = document.getElementById('authPassword').value;
 
       if (currentAuthMode === 'register') {
-        const username = document.getElementById('authUsername').value.trim();
-        if (!username) return alert('Введите никнейм!');
-
-        auth.createUserWithEmailAndPassword(email, password)
-          .then((cred) => {
-            return cred.user.updateProfile({ displayName: username }).then(() => {
-              return db.ref('users/' + cred.user.uid).set({ username: username, email: email });
-            });
-          })
-          .catch(err => alert('Ошибка регистрации: ' + err.message));
+        if (!username || !emailInput || !password) return alert('Введите никнейм, email и пароль!');
+        if (username.length < 2 || username.length > 20) return alert('Никнейм должен быть от 2 до 20 символов.');
       } else {
-        auth.signInWithEmailAndPassword(email, password)
-          .catch(err => alert('Неверный Email или пароль!'));
+        if (!emailInput || !password) return alert('Введите email (или старый никнейм) и пароль!');
+      }
+      if (password.length < 6) return alert('Пароль должен быть минимум 6 символов.');
+
+      try {
+        if (currentAuthMode === 'register') {
+          if (!isValidEmail(emailInput)) return alert('Введите корректный email.');
+          const cred = await auth.createUserWithEmailAndPassword(emailInput, password);
+          await cred.user.updateProfile({ displayName: username });
+          await db.ref(`users/${cred.user.uid}`).set({
+            username: username,
+            usernameNormalized: normalizeUsername(username),
+            email: emailInput.toLowerCase(),
+            authMode: 'email',
+            createdAt: firebase.database.ServerValue.TIMESTAMP
+          });
+          alert('Аккаунт создан!');
+        } else {
+          let authEmail = emailInput;
+          // Compatibility with old accounts that were created before email auth was restored.
+          if (!isValidEmail(authEmail)) authEmail = await usernameToLegacyAuthEmail(emailInput);
+          await auth.signInWithEmailAndPassword(authEmail, password);
+        }
+      } catch (err) {
+        if (err.code === 'auth/email-already-in-use') {
+          alert('Этот email уже зарегистрирован. Войдите в аккаунт.');
+        } else if (err.code === 'auth/user-not-found' || err.code === 'auth/wrong-password' || err.code === 'auth/invalid-credential') {
+          alert('Неверный email/никнейм или пароль.');
+        } else if (err.code === 'auth/invalid-email') {
+          alert('Некорректный email.');
+        } else {
+          alert((currentAuthMode === 'register' ? 'Ошибка регистрации: ' : 'Ошибка входа: ') + err.message);
+        }
       }
     }
 
-    function resetPassword() {
+    async function usernameToLegacyAuthEmail(username) {
+      const normalized = normalizeUsername(username);
+      const bytes = new TextEncoder().encode(normalized);
+      const digest = await crypto.subtle.digest('SHA-256', bytes);
+      const hex = Array.from(new Uint8Array(digest)).map(b => b.toString(16).padStart(2, '0')).join('');
+      return `u_${hex}@auth.dubscord.local`;
+    }
+
+    async function sendPasswordReset() {
       const email = document.getElementById('authEmail').value.trim();
-      if (!email) return alert('Введите ваш Email в поле выше!');
-      auth.sendPasswordResetEmail(email)
-        .then(() => alert('Письмо для сброса пароля отправлено на ' + email))
-        .catch(err => alert('Ошибка: ' + err.message));
+      if (!isValidEmail(email)) return alert('Введите ваш email в поле Email, затем нажмите «Забыли пароль?».');
+      try {
+        await auth.sendPasswordResetEmail(email);
+        alert('Письмо для восстановления пароля отправлено на ' + email + '.');
+      } catch (err) {
+        if (err.code === 'auth/user-not-found') alert('Аккаунт с таким email не найден.');
+        else alert('Не удалось отправить письмо: ' + err.message);
+      }
     }
 
     function logout() {
       if (confirm('Выйти из аккаунта?')) {
+        endCall(false);
+        Object.entries(globalCallsHandlers).forEach(([sid, handler]) => db.ref(`servers/${sid}/calls`).off('child_added', handler));
+        globalCallsHandlers = {};
         if (currentUser) {
           db.ref(`servers/${currentServerId}/online/${currentUser.uid}`).remove();
         }
@@ -564,7 +650,7 @@
       document.getElementById('setAllowCalls').checked = allowCalls;
       document.getElementById('setAllowNotifications').checked = allowNotifications;
       document.getElementById('editUsername').value = getUserName();
-      document.getElementById('editEmail').value = currentUser ? currentUser.email : '';
+      document.getElementById('editEmail').value = currentUser?.email || '';
       document.getElementById('settingsModal').style.display = 'flex';
     }
 
@@ -577,35 +663,39 @@
       localStorage.setItem('dubscord_allow_notifs', allowNotifications);
     }
 
-    function updateUsername() {
+    async function updateUsername() {
       const newName = document.getElementById('editUsername').value.trim();
       if (!newName) return alert('Введите никнейм!');
-      
-      currentUser.updateProfile({ displayName: newName })
-        .then(() => {
-          db.ref(`users/${currentUser.uid}/username`).set(newName);
-          initUser();
-          alert('Никнейм успешно изменен!');
-        })
-        .catch(err => alert('Ошибка: ' + err.message));
+      if (newName.length < 2 || newName.length > 20) return alert('Никнейм должен быть от 2 до 20 символов.');
+      if (!currentUser) return;
+
+      try {
+        await currentUser.updateProfile({ displayName: newName });
+        await db.ref(`users/${currentUser.uid}`).update({ username: newName, usernameNormalized: normalizeUsername(newName) });
+        initUser();
+        alert('Никнейм успешно изменен!');
+      } catch (err) {
+        alert('Ошибка: ' + err.message);
+      }
     }
 
-    function updateEmail() {
+    async function updateEmail() {
+      if (!currentUser) return;
       const newEmail = document.getElementById('editEmail').value.trim();
-      const password = document.getElementById('confirmPwdForEmail').value.trim();
-
-      if (!newEmail || !password) return alert('Заполните новый Email и текущий пароль!');
-
-      const credential = firebase.auth.EmailAuthProvider.credential(currentUser.email, password);
-
-      currentUser.reauthenticateWithCredential(credential)
-        .then(() => currentUser.updateEmail(newEmail))
-        .then(() => {
-          db.ref(`users/${currentUser.uid}/email`).set(newEmail);
-          alert('Email успешно изменен!');
-          document.getElementById('confirmPwdForEmail').value = '';
-        })
-        .catch(err => alert('Ошибка при смене Email: ' + err.message));
+      if (!isValidEmail(newEmail)) return alert('Введите корректный email.');
+      if (newEmail.toLowerCase() === (currentUser.email || '').toLowerCase()) return alert('Этот email уже установлен.');
+      const password = prompt('Введите текущий пароль для подтверждения смены email:');
+      if (!password) return;
+      try {
+        const credential = firebase.auth.EmailAuthProvider.credential(currentUser.email, password);
+        await currentUser.reauthenticateWithCredential(credential);
+        await currentUser.updateEmail(newEmail);
+        await db.ref(`users/${currentUser.uid}`).update({ email: newEmail.toLowerCase() });
+        document.getElementById('editEmail').value = newEmail;
+        alert('Email успешно изменен.');
+      } catch (err) {
+        alert('Не удалось изменить email: ' + err.message);
+      }
     }
 
     function updatePassword() {
@@ -627,25 +717,50 @@
         .catch(err => alert('Ошибка при смене пароля: ' + err.message));
     }
 
+    async function deleteOwnAccount() {
+      if (!currentUser) return;
+      const confirmation = prompt('Для удаления аккаунта введите: УДАЛИТЬ');
+      if (confirmation !== 'УДАЛИТЬ') return;
+      const password = prompt('Введите текущий пароль для подтверждения удаления аккаунта:');
+      if (!password) return;
+
+      try {
+        const credential = firebase.auth.EmailAuthProvider.credential(currentUser.email, password);
+        await currentUser.reauthenticateWithCredential(credential);
+
+        const ownedServers = [];
+        const membershipsSnap = await db.ref(`users/${currentUser.uid}/servers`).once('value');
+        const knownServers = Object.keys(membershipsSnap.val() || {}).filter(id => id !== 'main');
+        for (const serverId of knownServers) {
+          const snap = await db.ref(`servers/${serverId}/meta`).once('value');
+          const meta = snap.val() || {};
+          if (meta.createdByUid === currentUser.uid) ownedServers.push(serverId);
+        }
+        for (const serverId of ownedServers) {
+          await db.ref(`servers/${serverId}`).remove();
+        }
+        await db.ref(`users/${currentUser.uid}`).remove();
+        localStorage.removeItem(getServersStorageKey());
+        await currentUser.delete();
+        alert('Аккаунт удалён.');
+      } catch (err) {
+        alert('Не удалось удалить аккаунт: ' + err.message);
+      }
+    }
+
     function getUserName() {
       return (currentUser && currentUser.displayName) ? currentUser.displayName : 'Пользователь';
     }
 
     function initUser() {
+      loadUserServers();
+      if (!userServers.includes(currentServerId)) currentServerId = 'main';
       const name = getUserName();
       document.getElementById('displayUsername').innerText = name;
       document.getElementById('userAvatar').innerText = name.charAt(0).toUpperCase();
+      renderServerList();
       switchServer(currentServerId);
       listenGlobalCalls();
-    }
-
-    function loadUserServers() {
-      if (!currentUser) return;
-      db.ref(`users/${currentUser.uid}/servers`).on('value', (snapshot) => {
-        const serversObj = snapshot.val() || {};
-        userServers = ['main', ...Object.keys(serversObj)];
-        renderServerList();
-      });
     }
 
     function setupPresence() {
@@ -675,43 +790,121 @@
     function openServerModal() { document.getElementById('serverModal').style.display = 'flex'; }
     function closeServerModal() { document.getElementById('serverModal').style.display = 'none'; }
 
-    function createNewServer() {
-      const rawInput = document.getElementById('serverInput').value.trim();
+    async function createNewServer() {
+      const name = document.getElementById('serverInput').value.trim();
       const iconEmoji = document.getElementById('serverIconInput').value.trim() || '💬';
-      if (!rawInput) return alert('Введите название или ID!');
-      
-      const newId = rawInput.toLowerCase().replace(/[^a-z0-9_-]/g, '') || ('srv_' + Math.random().toString(36).substr(2, 6));
+      if (!name) return alert('Введите название!');
+      if (!currentUser) return alert('Сначала войдите в аккаунт.');
+      const newId = 'srv_' + crypto.randomUUID().replace(/-/g, '').slice(0, 12);
 
-      db.ref(`servers/${newId}/meta`).set({ name: rawInput, icon: iconEmoji, createdBy: getUserName() });
-      if (currentUser) {
-        db.ref(`users/${currentUser.uid}/servers/${newId}`).set(true);
+      const serverData = {
+        meta: { name: name, icon: iconEmoji, createdBy: getUserName(), createdByUid: currentUser.uid, createdAt: firebase.database.ServerValue.TIMESTAMP },
+        members: { [currentUser.uid]: true }
+      };
+
+      try {
+        await db.ref(`servers/${newId}`).set(serverData);
+        if (!userServers.includes(newId)) userServers.push(newId);
+        saveUserServers();
+        await db.ref(`users/${currentUser.uid}/servers/${newId}`).set(true);
+        document.getElementById('serverInput').value = '';
+        document.getElementById('serverIconInput').value = '';
+        closeServerModal();
+        renderServerList();
+        switchServer(newId);
+      } catch (err) {
+        alert('Не удалось создать сервер: ' + err.message);
       }
-
-      document.getElementById('serverInput').value = '';
-      document.getElementById('serverIconInput').value = '';
-      closeServerModal();
-      switchServer(newId);
     }
 
-    function joinServerById() {
+    async function joinServerById() {
       const id = document.getElementById('serverInput').value.trim();
       if (!id) return alert('Введите ID сервера!');
-      if (currentUser) {
-        db.ref(`users/${currentUser.uid}/servers/${id}`).set(true);
+      if (!currentUser) return alert('Сначала войдите в аккаунт.');
+
+      try {
+        const snap = await db.ref(`servers/${id}/meta`).once('value');
+        if (!snap.exists()) return alert('Сервер с таким ID не найден.');
+        await db.ref(`servers/${id}/members/${currentUser.uid}`).set(true);
+        await db.ref(`users/${currentUser.uid}/servers/${id}`).set(true);
+        if (!userServers.includes(id)) userServers.push(id);
+        saveUserServers();
+        document.getElementById('serverInput').value = '';
+        closeServerModal();
+        renderServerList();
+        switchServer(id);
+      } catch (err) {
+        alert('Не удалось войти на сервер: ' + err.message);
       }
-      document.getElementById('serverInput').value = '';
-      closeServerModal();
-      switchServer(id);
     }
 
-    function deleteCurrentServer() {
-      if (currentServerId === 'main') return alert('Основной сервер нельзя удалить!');
-      if (confirm('Удалить этот сервер?')) {
-        db.ref(`servers/${currentServerId}`).remove();
-        if (currentUser) {
-          db.ref(`users/${currentUser.uid}/servers/${currentServerId}`).remove();
-        }
+    async function leaveCurrentServer() {
+      if (currentServerId === 'main') return alert('Основной сервер нельзя покинуть.');
+      if (!currentUser) return;
+      try {
+        const metaSnap = await db.ref(`servers/${currentServerId}/meta`).once('value');
+        const meta = metaSnap.val() || {};
+        if (meta.createdByUid === currentUser.uid) return deleteCurrentServer();
+        if (!confirm('Выйти с этого сервера?')) return;
+        await db.ref(`servers/${currentServerId}/members/${currentUser.uid}`).remove();
+        await db.ref(`users/${currentUser.uid}/servers/${currentServerId}`).remove();
+        userServers = userServers.filter(id => id !== currentServerId);
+        saveUserServers();
         switchServer('main');
+      } catch (err) {
+        alert('Не удалось выйти с сервера: ' + err.message);
+      }
+    }
+
+    async function deleteCurrentServer() {
+      if (currentServerId === 'main') return alert('Основной сервер нельзя удалить!');
+      if (!currentUser) return;
+      try {
+        const metaSnap = await db.ref(`servers/${currentServerId}/meta`).once('value');
+        const meta = metaSnap.val() || {};
+        if (meta.createdByUid !== currentUser.uid) return alert('Удалить сервер может только его создатель.');
+        if (!confirm('Удалить этот сервер? Это удалит его сообщения и участников.')) return;
+        await db.ref(`servers/${currentServerId}`).remove();
+        await db.ref(`users/${currentUser.uid}/servers/${currentServerId}`).remove();
+        userServers = userServers.filter(id => id !== currentServerId);
+        saveUserServers();
+        switchServer('main');
+      } catch (err) {
+        alert('Не удалось удалить сервер: ' + err.message);
+      }
+    }
+
+    function openEditServerModal() {
+      if (!currentUser || currentServerId === 'main') return;
+      db.ref(`servers/${currentServerId}/meta`).once('value').then(s => {
+        const meta = s.val() || {};
+        if (meta.createdByUid !== currentUser.uid) return alert('Редактировать сервер может только его создатель.');
+        document.getElementById('editServerName').value = meta.name || '';
+        document.getElementById('editServerIcon').value = meta.icon || '💬';
+        document.getElementById('editServerModal').style.display = 'flex';
+      }).catch(err => alert('Не удалось открыть редактирование: ' + err.message));
+    }
+
+    function closeEditServerModal() {
+      document.getElementById('editServerModal').style.display = 'none';
+    }
+
+    async function saveServerEdits() {
+      if (!currentUser || currentServerId === 'main') return;
+      const name = document.getElementById('editServerName').value.trim();
+      const icon = document.getElementById('editServerIcon').value.trim() || '💬';
+      if (!name) return alert('Введите название сервера.');
+      try {
+        const metaSnap = await db.ref(`servers/${currentServerId}/meta`).once('value');
+        const meta = metaSnap.val() || {};
+        if (meta.createdByUid !== currentUser.uid) return alert('Редактировать сервер может только его создатель.');
+        await db.ref(`servers/${currentServerId}/meta`).update({ name, icon, createdBy: getUserName() });
+        closeEditServerModal();
+        renderServerList();
+        switchServer(currentServerId);
+        alert('Сервер обновлён.');
+      } catch (err) {
+        alert('Не удалось сохранить изменения: ' + err.message);
       }
     }
 
@@ -724,9 +917,10 @@
         const icon = document.createElement('div');
         icon.className = `server-icon ${currentServerId === srvId ? 'active' : ''}`;
         
+        // Загружаем смайлик из базы данных
         db.ref(`servers/${srvId}/meta`).once('value', (s) => {
           const meta = s.val() || {};
-          icon.innerText = meta.icon || srvId.substr(0, 2).toUpperCase();
+          icon.innerText = meta.icon || srvId.substr(4, 2).toUpperCase();
           if (meta.name) icon.title = `${meta.name} (ID: ${srvId})`;
         });
 
@@ -746,21 +940,33 @@
       currentServerId = serverId;
       document.getElementById('currentServerId').innerText = `ID: ${serverId}`;
       const deleteBtn = document.getElementById('deleteServerBtn');
+      const editBtn = document.getElementById('editServerBtn');
 
       if (serverId === 'main') {
         document.getElementById('currentServerName').innerText = 'Главный Сервер';
         document.getElementById('server-btn-main').classList.add('active');
         deleteBtn.style.display = 'none';
+        editBtn.style.display = 'none';
       } else {
         document.getElementById('server-btn-main').classList.remove('active');
         deleteBtn.style.display = 'flex';
+        editBtn.style.display = 'none';
         db.ref(`servers/${serverId}/meta`).once('value', (s) => {
           const meta = s.val() || {};
-          document.getElementById('currentServerName').innerText = `${meta.icon || ''} ${meta.name || serverId}`;
+          document.getElementById('currentServerName').innerText = `${meta.icon || ''} ${meta.name || 'Сервер'}`;
+          const isOwner = meta.createdByUid === currentUser?.uid;
+          deleteBtn.title = isOwner ? 'Удалить сервер' : 'Выйти с сервера';
+          editBtn.style.display = isOwner ? 'flex' : 'none';
+          if (isOwner) {
+            deleteBtn.style.display = 'flex';
+            db.ref(`servers/${serverId}/members/${currentUser.uid}`).set(true).catch(() => {});
+            db.ref(`users/${currentUser.uid}/servers/${serverId}`).set(true).catch(() => {});
+          }
         });
       }
 
       renderServerList();
+      listenGlobalCalls();
       setupPresence();
       listenMessages();
     }
@@ -784,9 +990,10 @@
           msgEl.className = 'message';
           let contentHtml = `<div class="message-text">${escapeHtml(msg.text || '')}</div>`;
           if (msg.file) {
+            const fileUrl = msg.file.url || msg.file.data;
             contentHtml += `
-              <a href="${msg.file.data}" download="${escapeHtml(msg.file.name)}" class="file-attachment">
-                <svg class="icon"><use href="#icon-attach"/></svg> ${escapeHtml(msg.file.name)} <span>(Скачать)</span>
+              <a href="${escapeHtml(fileUrl)}" target="_blank" rel="noopener noreferrer" download="${escapeHtml(msg.file.name)}" class="file-attachment">
+                <svg class="icon"><use href="#icon-attach"/></svg> ${escapeHtml(msg.file.name)} <span>(Открыть)</span>
               </a>
             `;
           }
@@ -811,7 +1018,7 @@
 
     function sendMessage(text, fileData = null, isSystem = false) {
       const timeStr = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-      const msgObj = { author: getUserName(), text: text, time: timeStr, isSystem: isSystem };
+      const msgObj = { author: getUserName(), authorUid: currentUser ? currentUser.uid : '', text: text, time: timeStr, isSystem: isSystem };
       if (fileData) msgObj.file = fileData;
       db.ref(`servers/${currentServerId}/messages`).push(msgObj);
     }
@@ -826,31 +1033,345 @@
       }
     }
 
-    function handleFileUpload(e) {
+    async function handleFileUpload(e) {
       const file = e.target.files[0];
       if (!file) return;
-      if (file.size > 5 * 1024 * 1024) return alert('Размер файла больше 5 МБ');
-
-      const reader = new FileReader();
-      reader.onload = function(evt) {
-        sendMessage(`Отправлен файл: ${file.name}`, { name: file.name, data: evt.target.result });
-      };
-      reader.readAsDataURL(file);
       e.target.value = '';
+
+      if (file.size > 25 * 1024 * 1024) {
+        return alert('Размер файла больше 25 МБ');
+      }
+      if (!currentUser) return alert('Сначала войдите в аккаунт');
+
+      try {
+        const safeName = file.name.replace(/[^a-zA-Z0-9а-яА-Я._-]/g, '_');
+        const path = `uploads/${currentServerId}/${currentUser.uid}/${Date.now()}_${safeName}`;
+        const ref = storage.ref(path);
+        await ref.put(file);
+        const url = await ref.getDownloadURL();
+        sendMessage(`Отправлен файл: ${file.name}`, { name: file.name, url: url, path: path, size: file.size, type: file.type });
+      } catch (err) {
+        alert('Не удалось загрузить файл: ' + err.message);
+      }
     }
 
-    /* WebRTC Signaling */
-    function listenGlobalCalls() {
-      db.ref(`global_calls`).on('child_added', (snapshot) => {
-        const call = snapshot.val();
-        if (call.caller !== getUserName() && allowCalls) {
-          activeIncomingCall = { ...call, key: snapshot.key };
-          document.getElementById('incomingCallText').innerText = `Звонок от ${call.caller}...`;
-          document.getElementById('incomingCallBox').style.display = 'flex';
-          document.getElementById('activeCallBanner').style.display = 'flex';
-        }
-      });
+    function createPeerConnection(callId, role, callType) {
+      const pc = new RTCPeerConnection(rtcConfig);
+      peerConnection = pc;
 
-      db.ref(`global_calls`).on('child_removed', (snapshot) => {
-        if (activeIncomingCall && activeIncomingCall.key === snapshot.key) {
-          declineIncomingCall();
+      pc.onicecandidate = (event) => {
+        if (!event.candidate) return;
+        const side = role === 'caller' ? 'callerCandidates' : 'calleeCandidates';
+        db.ref(`servers/${currentCallServerId}/calls/${callId}/${side}`).push(event.candidate.toJSON());
+      };
+
+      pc.ontrack = (event) => {
+        remoteStream = event.streams[0];
+        const remoteVideo = document.getElementById('remoteVideo');
+        const remoteAudio = document.getElementById('remoteAudio');
+        if (callType === 'video') {
+          remoteVideo.srcObject = remoteStream;
+          remoteVideo.style.display = 'block';
+        } else {
+          remoteAudio.srcObject = remoteStream;
+          remoteVideo.style.display = 'none';
+        }
+      };
+
+      pc.onconnectionstatechange = () => {
+        if (['failed', 'disconnected', 'closed'].includes(pc.connectionState)) {
+          if (pc.connectionState === 'failed') {
+            try { pc.restartIce(); } catch (e) {}
+          }
+        }
+      };
+
+      if (localStream) {
+        localStream.getTracks().forEach(track => pc.addTrack(track, localStream));
+      }
+      return pc;
+    }
+
+    function listenGlobalCalls() {
+      Object.entries(globalCallsHandlers).forEach(([sid, handler]) => {
+        db.ref(`servers/${sid}/calls`).off('child_added', handler);
+      });
+      globalCallsHandlers = {};
+      if (!currentUser) return;
+
+      userServers.filter(sid => sid !== 'main').forEach((sid) => {
+        const handler = (snapshot) => {
+          const call = snapshot.val();
+          if (!call || call.status !== 'ringing' || call.callerUid === currentUser?.uid) return;
+          if (!allowCalls || call.timestamp && Date.now() - call.timestamp > 120000) return;
+          activeIncomingCall = { ...call, id: snapshot.key, serverId: sid };
+          document.getElementById('incomingCallText').innerText = `Звонок от ${call.callerName || 'пользователя'}...`;
+          document.getElementById('incomingCallBox').style.display = 'flex';
+        };
+        globalCallsHandlers[sid] = handler;
+        db.ref(`servers/${sid}/calls`).on('child_added', handler);
+      });
+    }
+
+    async function startCall(type) {
+      if (!currentUser) return;
+      if (currentServerId === 'main') {
+        return alert('Звонки доступны внутри пользовательских серверов.');
+      }
+      if (!window.RTCPeerConnection || !navigator.mediaDevices?.getUserMedia) {
+        return alert('Этот браузер не поддерживает необходимые функции для звонков.');
+      }
+
+      try {
+        currentCallType = type;
+        currentCallRole = 'caller';
+        localStream = await navigator.mediaDevices.getUserMedia({ audio: true, video: type === 'video' });
+        isMicMuted = false;
+        document.getElementById('micBtn').classList.remove('active');
+        document.getElementById('micBtn').querySelector('use').setAttribute('href', '#icon-mic');
+
+        currentCallServerId = currentServerId;
+        const callRef = db.ref(`servers/${currentCallServerId}/calls`).push();
+        currentCallId = callRef.key;
+        await callRef.set({
+          callerUid: currentUser.uid,
+          callerName: getUserName(),
+          serverId: currentServerId,
+          type: type,
+          timestamp: Date.now(),
+          status: 'ringing'
+        });
+
+        document.getElementById('callModal').style.display = 'flex';
+        document.getElementById('callTitle').innerText = type === 'video' ? 'Видеозвонок — ожидание...' : 'Голосовой звонок — ожидание...';
+        document.getElementById('remoteVideo').style.display = type === 'video' ? 'block' : 'none';
+        document.getElementById('remoteVideo').srcObject = null;
+        document.getElementById('remoteAudio').srcObject = null;
+
+        const pc = createPeerConnection(currentCallId, 'caller', type);
+        const offer = await pc.createOffer();
+        await pc.setLocalDescription(offer);
+        await callRef.child('offer').set({ type: offer.type, sdp: offer.sdp });
+
+        answerHandler = (snap) => {
+          const answer = snap.val();
+          if (answer && pc.signalingState !== 'stable') {
+            pc.setRemoteDescription(new RTCSessionDescription(answer)).catch(console.error);
+          }
+        };
+        callRef.child('answer').on('value', answerHandler);
+
+        calleeCandidateHandler = (snap) => {
+          const candidate = snap.val();
+          if (candidate) pc.addIceCandidate(new RTCIceCandidate(candidate)).catch(() => {});
+        };
+        callRef.child('calleeCandidates').on('child_added', calleeCandidateHandler);
+
+        watchCallStatus();
+        startCallTimer();
+        sendMessage(`Начал(а) ${type === 'video' ? 'видеозвонок' : 'голосовой звонок'}`, null, true);
+      } catch (err) {
+        alert('Ошибка доступа к микрофону/камере: ' + err.message);
+        endCall(false);
+      }
+    }
+
+    async function acceptIncomingCall() {
+      const call = activeIncomingCall;
+      activeIncomingCall = null;
+      document.getElementById('incomingCallBox').style.display = 'none';
+      if (!call) return;
+
+      try {
+        if (!userServers.includes(call.serverId)) return alert('Сервер звонка недоступен.');
+        switchServer(call.serverId);
+        currentCallId = call.id;
+        currentCallRole = 'callee';
+        currentCallType = call.type || 'audio';
+        localStream = await navigator.mediaDevices.getUserMedia({ audio: true, video: currentCallType === 'video' });
+        isMicMuted = false;
+        document.getElementById('micBtn').classList.remove('active');
+        document.getElementById('micBtn').querySelector('use').setAttribute('href', '#icon-mic');
+
+        currentCallServerId = call.serverId;
+        const callRef = db.ref(`servers/${currentCallServerId}/calls/${currentCallId}`);
+        const snap = await callRef.once('value');
+        const freshCall = snap.val();
+        if (!freshCall || freshCall.status === 'ended' || !freshCall.offer) {
+          throw new Error('Звонок уже завершён или недоступен.');
+        }
+
+        await callRef.update({ status: 'accepted', acceptedByUid: currentUser.uid, acceptedByName: getUserName() });
+        document.getElementById('callModal').style.display = 'flex';
+        document.getElementById('callTitle').innerText = currentCallType === 'video' ? 'Видеозвонок' : 'Голосовой звонок';
+        document.getElementById('remoteVideo').style.display = currentCallType === 'video' ? 'block' : 'none';
+
+        const pc = createPeerConnection(currentCallId, 'callee', currentCallType);
+        await pc.setRemoteDescription(new RTCSessionDescription(freshCall.offer));
+        const answer = await pc.createAnswer();
+        await pc.setLocalDescription(answer);
+        await callRef.child('answer').set({ type: answer.type, sdp: answer.sdp });
+
+        callerCandidateHandler = (candidateSnap) => {
+          const candidate = candidateSnap.val();
+          if (candidate) pc.addIceCandidate(new RTCIceCandidate(candidate)).catch(() => {});
+        };
+        callRef.child('callerCandidates').on('child_added', callerCandidateHandler);
+
+        watchCallStatus();
+        startCallTimer();
+        sendMessage(`Принял(а) звонок`, null, true);
+      } catch (err) {
+        alert('Не удалось принять звонок: ' + err.message);
+        endCall(false);
+      }
+    }
+
+    function watchCallStatus() {
+      if (!currentCallId) return;
+      if (callStatusRef && callStatusHandler) callStatusRef.off('value', callStatusHandler);
+      callStatusRef = db.ref(`servers/${currentCallServerId}/calls/${currentCallId}`);
+      callStatusHandler = (snap) => {
+        const call = snap.val();
+        if (!call || call.status === 'ended') {
+          endCall(false);
+        } else if (call.status === 'accepted') {
+          document.getElementById('callTitle').innerText = currentCallType === 'video' ? 'Видеозвонок' : 'Голосовой звонок';
+        }
+      };
+      callStatusRef.on('value', callStatusHandler);
+    }
+
+    function declineIncomingCall() {
+      const call = activeIncomingCall;
+      activeIncomingCall = null;
+      document.getElementById('incomingCallBox').style.display = 'none';
+      if (call?.id && call.serverId) db.ref(`servers/${call.serverId}/calls/${call.id}`).update({ status: 'ended' });
+    }
+
+    function startCallTimer() {
+      callStartTime = Date.now();
+      document.getElementById('activeCallBanner').style.display = 'flex';
+      if (callTimerInterval) clearInterval(callTimerInterval);
+
+      callTimerInterval = setInterval(() => {
+        const diff = Math.floor((Date.now() - callStartTime) / 1000);
+        const m = String(Math.floor(diff / 60)).padStart(2, '0');
+        const s = String(diff % 60).padStart(2, '0');
+        document.getElementById('callTimer').innerText = `${m}:${s}`;
+      }, 1000);
+    }
+
+    function reopenCallModal() {
+      document.getElementById('callModal').style.display = 'flex';
+    }
+
+    function toggleMuteMic() {
+      if (!localStream) return;
+      isMicMuted = !isMicMuted;
+      localStream.getAudioTracks().forEach(track => { track.enabled = !isMicMuted; });
+      const micBtn = document.getElementById('micBtn');
+      micBtn.querySelector('use').setAttribute('href', isMicMuted ? '#icon-mic-off' : '#icon-mic');
+      micBtn.classList.toggle('active', isMicMuted);
+    }
+
+    async function toggleAudioOutput() {
+      isSpeakerPhone = !isSpeakerPhone;
+      const audio = document.getElementById('remoteAudio');
+      const video = document.getElementById('remoteVideo');
+      const media = audio || video;
+      if (media && typeof media.setSinkId === 'function') {
+        try {
+          await media.setSinkId('default');
+        } catch (e) {}
+      }
+      document.getElementById('speakerBtn').classList.toggle('active', !isSpeakerPhone);
+    }
+
+    function endCall(sendNotify = true) {
+      const endedCallId = currentCallId;
+      if (callStatusRef && callStatusHandler) callStatusRef.off('value', callStatusHandler);
+      if (endedCallId) {
+        const ref = db.ref(`servers/${currentCallServerId}/calls/${endedCallId}`);
+        if (currentCallRole === 'caller' || sendNotify) ref.update({ status: 'ended', endedAt: Date.now() }).catch(() => {});
+        if (answerHandler) ref.child('answer').off('value', answerHandler);
+        if (callerCandidateHandler) ref.child('callerCandidates').off('child_added', callerCandidateHandler);
+        if (calleeCandidateHandler) ref.child('calleeCandidates').off('child_added', calleeCandidateHandler);
+      }
+
+      if (peerConnection) {
+        peerConnection.ontrack = null;
+        peerConnection.onicecandidate = null;
+        peerConnection.close();
+        peerConnection = null;
+      }
+      if (localStream) {
+        localStream.getTracks().forEach(track => track.stop());
+        localStream = null;
+      }
+      remoteStream = null;
+      document.getElementById('remoteVideo').srcObject = null;
+      document.getElementById('remoteAudio').srcObject = null;
+
+      if (callTimerInterval) {
+        clearInterval(callTimerInterval);
+        callTimerInterval = null;
+      }
+
+      document.getElementById('callModal').style.display = 'none';
+      document.getElementById('activeCallBanner').style.display = 'none';
+      document.getElementById('micBtn').classList.remove('active');
+      document.getElementById('micBtn').querySelector('use').setAttribute('href', '#icon-mic');
+
+      currentCallId = null;
+      currentCallRole = null;
+      currentCallType = null;
+      currentCallServerId = null;
+      answerHandler = null;
+      callerCandidateHandler = null;
+      calleeCandidateHandler = null;
+    }
+
+    function playBeepSound() {
+      try {
+        const ctx = new (window.AudioContext || window.webkitAudioContext)();
+        const osc = ctx.createOscillator();
+        osc.connect(ctx.destination);
+        osc.frequency.value = 800;
+        osc.start();
+        osc.stop(ctx.currentTime + 0.15);
+      } catch(e) {}
+    }
+
+    function toggleMobileSidebar() {
+      const sidebar = document.getElementById('channelsSidebar');
+      const backdrop = document.getElementById('mobileBackdrop');
+      document.getElementById('membersSidebar').classList.remove('open');
+      sidebar.classList.toggle('open');
+      backdrop.classList.toggle('active', sidebar.classList.contains('open'));
+    }
+
+    function toggleMobileMembers() {
+      const members = document.getElementById('membersSidebar');
+      const backdrop = document.getElementById('mobileBackdrop');
+      document.getElementById('channelsSidebar').classList.remove('open');
+      members.classList.toggle('open');
+      backdrop.classList.toggle('active', members.classList.contains('open'));
+    }
+
+    function closeMobileDrawers() {
+      document.getElementById('channelsSidebar').classList.remove('open');
+      document.getElementById('membersSidebar').classList.remove('open');
+      document.getElementById('mobileBackdrop').classList.remove('active');
+    }
+
+    function escapeHtml(text) {
+      const div = document.createElement('div');
+      div.innerText = text;
+      return div.innerHTML;
+    }
+  </script>
+</body>
+</html>
+
+
