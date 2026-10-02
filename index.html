@@ -2,14 +2,13 @@
 <html lang="ru">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
   <title>Dubscord</title>
   
   <!-- Firebase SDK -->
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-storage-compat.js"></script>
 
   <style>
     :root {
@@ -26,7 +25,10 @@
     }
 
     * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'gg sans', sans-serif; }
-    body, html { height: 100%; width: 100%; background-color: var(--bg-dark); color: var(--text-main); overflow: hidden; }
+    html { height: 100%; width: 100%; background-color: var(--bg-dark); }
+    body { height: 100%; width: 100%; background-color: var(--bg-dark); color: var(--text-main); overflow: hidden; overscroll-behavior: none; }
+    button, label, input { -webkit-tap-highlight-color: transparent; }
+    button, .icon-btn, .server-icon, .file-btn, .composer-btn { touch-action: manipulation; }
 
     /* Custom SVG Icons helper */
     .icon {
@@ -157,14 +159,14 @@
     .icon-btn { cursor: pointer; color: var(--text-muted); padding: 6px; display: flex; align-items: center; justify-content: center; border-radius: 4px; }
     .icon-btn:hover { color: #fff; background: rgba(255,255,255,0.05); }
 
-    .chat-area { flex: 1; display: flex; flex-direction: column; background: var(--bg-chat); min-width: 0; }
+    .chat-area { flex: 1 1 auto; display: flex; flex-direction: column; background: var(--bg-chat); min-width: 0; min-height: 0; position: relative; }
     .chat-header {
       height: 48px; border-bottom: 1px solid var(--bg-servers); display: flex; align-items: center;
       padding: 0 16px; font-weight: bold; color: #fff; justify-content: space-between;
     }
     .chat-actions { display: flex; gap: 8px; align-items: center; }
 
-    .chat-messages { flex: 1; padding: 16px; overflow-y: auto; display: flex; flex-direction: column; gap: 12px; }
+    .chat-messages { flex: 1 1 auto; min-height: 0; padding: 16px; overflow-y: auto; -webkit-overflow-scrolling: touch; overscroll-behavior: contain; display: flex; flex-direction: column; gap: 12px; }
     .message { display: flex; gap: 12px; }
     .message-author { font-weight: bold; font-size: 14px; color: #fff; }
     .message-author span { font-size: 10px; color: var(--text-muted); margin-left: 6px; font-weight: normal; }
@@ -175,12 +177,22 @@
       display: inline-flex; align-items: center; gap: 8px; background: #2b2d31; padding: 8px 12px;
       border-radius: 4px; margin-top: 6px; text-decoration: none; color: var(--accent); font-size: 14px; border: 1px solid #111;
     }
+    .image-attachment { display: block; width: min(360px, 100%); max-width: 100%; margin-top: 6px; border-radius: 8px; overflow: hidden; background: #1f2023; }
+    .image-attachment img { display: block; width: 100%; max-height: 360px; object-fit: contain; background: #1f2023; }
 
-    .chat-input-container { padding: 0 16px 16px 16px; }
-    .chat-input-wrapper { background: #383a40; border-radius: 8px; display: flex; align-items: center; padding: 0 12px; gap: 8px; }
-    .file-btn { cursor: pointer; color: var(--text-muted); padding: 4px; display: flex; align-items: center; }
-    .file-btn:hover { color: #fff; }
-    .chat-input { width: 100%; padding: 12px 0; background: transparent; border: none; color: var(--text-main); font-size: 15px; outline: none; }
+    .chat-input-container { padding: 8px 16px calc(12px + env(safe-area-inset-bottom)) 16px; flex-shrink: 0; background: var(--bg-chat); }
+    .chat-input-wrapper { min-height: 48px; background: #383a40; border-radius: 10px; display: flex; align-items: center; padding: 4px 8px; gap: 4px; border: 1px solid rgba(255,255,255,0.04); }
+    .file-btn, .composer-btn { cursor: pointer; color: var(--text-muted); width: 38px; height: 38px; padding: 8px; display: flex; align-items: center; justify-content: center; border: 0; background: transparent; border-radius: 8px; flex: 0 0 38px; }
+    .file-btn:hover, .composer-btn:hover { color: #fff; background: rgba(255,255,255,0.06); }
+    .chat-input { width: 100%; min-width: 0; padding: 10px 4px; background: transparent; border: none; color: var(--text-main); font-size: 15px; outline: none; }
+    .chat-input::placeholder { color: var(--text-muted); }
+    .send-btn { color: #fff; background: var(--accent); }
+    .send-btn:hover { background: var(--accent-hover); }
+    .attach-menu { position: absolute; left: 16px; bottom: 66px; display: none; flex-direction: column; min-width: 190px; padding: 6px; background: #18191c; border: 1px solid #3f4147; border-radius: 10px; box-shadow: 0 10px 30px rgba(0,0,0,.45); z-index: 30; }
+    .attach-menu.open { display: flex; }
+    .attach-menu button { border: 0; background: transparent; color: var(--text-main); padding: 10px 12px; border-radius: 7px; display: flex; align-items: center; gap: 10px; text-align: left; font-size: 14px; }
+    .attach-menu button:hover { background: #2b2d31; }
+    .attach-menu .icon { color: var(--accent); }
 
     .members-sidebar { width: 200px; background: var(--bg-channels); padding: 16px 8px; display: flex; flex-direction: column; gap: 8px; z-index: 9; flex-shrink: 0; }
     .member-item { display: flex; align-items: center; gap: 8px; padding: 6px 8px; border-radius: 4px; }
@@ -189,11 +201,38 @@
     .mobile-menu-btn { display: none; background: none; border: none; color: #fff; cursor: pointer; padding: 4px; }
 
     @media (max-width: 768px) {
-      .mobile-menu-btn { display: flex; }
-      .channels-sidebar { position: absolute; left: 72px; top: 0; bottom: 0; width: 220px; transform: translateX(-150%); transition: transform 0.25s ease-in-out; }
+      #app { height: 100dvh; min-height: 100dvh; }
+      .mobile-menu-btn { display: flex; align-items: center; justify-content: center; width: 40px; height: 40px; padding: 8px; border-radius: 8px; }
+      .chat-header { height: 52px; min-height: 52px; padding: 0 8px 0 6px; }
+      .chat-header > div:first-child { min-width: 0; }
+      .chat-header > div:first-child > span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+      .chat-actions { gap: 2px; }
+      .chat-actions .icon-btn { width: 40px; height: 40px; padding: 9px; }
+      .channels-sidebar { position: fixed; left: 72px; top: 0; bottom: 0; height: 100dvh; width: min(82vw, 280px); transform: translateX(-110%); transition: transform 0.2s ease-out; z-index: 20; box-shadow: 8px 0 25px rgba(0,0,0,.35); }
       .channels-sidebar.open { transform: translateX(0); }
-      .members-sidebar { position: absolute; right: 0; top: 0; bottom: 0; width: 220px; transform: translateX(100%); transition: transform 0.25s ease-in-out; }
+      .members-sidebar { position: fixed; right: 0; top: 0; bottom: 0; height: 100dvh; width: min(82vw, 280px); transform: translateX(110%); transition: transform 0.2s ease-out; z-index: 20; box-shadow: -8px 0 25px rgba(0,0,0,.35); }
       .members-sidebar.open { transform: translateX(0); }
+      .mobile-backdrop { left: 72px; z-index: 19; }
+      .chat-messages { padding: 12px 10px; gap: 10px; }
+      .message { gap: 8px; }
+      .message .avatar { width: 34px; height: 34px; min-width: 34px; }
+      .message-text { font-size: 15px; line-height: 1.35; }
+      .chat-input-container { padding: 6px 8px calc(8px + env(safe-area-inset-bottom)) 8px; }
+      .chat-input-wrapper { min-height: 50px; border-radius: 12px; padding: 5px 6px; }
+      .chat-input { font-size: 16px; padding: 10px 3px; }
+      .file-btn, .composer-btn { width: 40px; height: 40px; flex-basis: 40px; }
+      .send-btn { width: 40px; height: 40px; }
+      .attach-menu { left: 8px; bottom: calc(62px + env(safe-area-inset-bottom)); min-width: 210px; }
+      .modal-overlay { padding: max(8px, env(safe-area-inset-top)) 8px max(8px, env(safe-area-inset-bottom)) 8px; }
+      .modal { width: min(94vw, 420px); max-height: 88dvh; padding: 18px; }
+      .incoming-call-box { top: max(10px, env(safe-area-inset-top)); right: 10px; left: 10px; }
+    }
+    @media (max-width: 380px) {
+      .servers-sidebar { width: 60px; }
+      .server-icon { width: 42px; height: 42px; }
+      .channels-sidebar { left: 60px; }
+      .mobile-backdrop { left: 60px; }
+      .chat-header { padding-left: 4px; }
     }
   </style>
 </head>
@@ -219,6 +258,10 @@
       <g id="icon-logout"><path d="M17 7l-1.41 1.41L18.17 11H8v2h10.17l-2.58 2.58L17 17l5-5zM4 5h8V3H4c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h8v-2H4V5z"/></g>
       <g id="icon-trash"><path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/></g>
       <g id="icon-attach"><path d="M16.5 6v11.5c0 2.21-1.79 4-4 4s-4-1.79-4-4V5c0-1.38 1.12-2.5 2.5-2.5s2.5 1.12 2.5 2.5v10.5c0 .55-.45 1-1 1s-1-.45-1-1V6H10v9.5c0 1.38 1.12 2.5 2.5 2.5s2.5-1.12 2.5-2.5V5c0-2.21-1.79-4-4-4s-4 1.79-4 4v12.5c0 3.04 2.46 5.5 5.5 5.5s5.5-2.46 5.5-5.5V6h-1.5z"/></g>
+      <g id="icon-image"><path d="M21 19V5c0-1.1-.9-2-2-2H5C3.9 3 3 3.9 3 5v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2zM5 5h14v9l-3.5-3.5-4 5L9 13l-2 2-2-2V5zm3 4.5A1.5 1.5 0 1 0 8 6.5a1.5 1.5 0 0 0 0 3z"/></g>
+      <g id="icon-file"><path d="M14 2H6c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V8l-6-6zm1 7V3.5L18.5 9H15zM6 20V4h8v6h6v10H6z"/></g>
+      <g id="icon-send"><path d="M2.01 21 23 12 2.01 3 2 10l15 2-15 2z"/></g>
+      <g id="icon-plus-circle"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/></g>
       <g id="icon-users"><path d="M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5c-1.66 0-3 1.34-3 3s1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5C6.34 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z"/></g>
       <g id="icon-menu"><path d="M3 18h18v-2H3v2zm0-5h18v-2H3v2zm0-7v2h18V6H3z"/></g>
       <g id="icon-plus"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/></g>
@@ -234,18 +277,23 @@
         <button id="tabRegister" class="tab-btn" onclick="switchAuthTab('register')">Регистрация</button>
       </div>
       
-      <input type="text" id="authUsername" placeholder="Ваш никнейм..." maxlength="20" autocomplete="nickname">
-      <input type="email" id="authEmail" placeholder="Email..." autocomplete="email">
+      <div id="regUsernameBox" style="display: none;">
+        <input type="text" id="authUsername" placeholder="Ваш никнейм..." maxlength="20" autocomplete="off">
+      </div>
+      
+      <input type="email" id="authEmail" placeholder="Ваш Email..." autocomplete="off">
       
       <div class="password-wrapper">
-        <input type="password" id="authPassword" placeholder="Пароль..." autocomplete="current-password">
+        <input type="password" id="authPassword" placeholder="Пароль..." autocomplete="off">
         <button type="button" class="toggle-password-btn" onclick="togglePasswordVisibility('authPassword', this)" title="Показать/скрыть">
           <svg class="icon"><use href="#icon-eye"/></svg>
         </button>
       </div>
 
-      <a id="forgotPasswordLink" class="forgot-link" onclick="sendPasswordReset()">Забыли пароль?</a>
       <button id="authSubmitBtn" class="action-btn" onclick="handleAuth()">Войти</button>
+      <div>
+        <a class="forgot-link" id="forgotPwdBtn" onclick="resetPassword()">Забыли пароль?</a>
+      </div>
     </div>
   </div>
 
@@ -269,8 +317,14 @@
       <button class="action-btn" onclick="updateUsername()">Сохранить никнейм</button>
 
       <h3>Изменить Email</h3>
-      <input type="email" id="editEmail" placeholder="Новый email" autocomplete="email">
-      <button class="action-btn" onclick="updateEmail()">Сохранить email</button>
+      <input type="email" id="editEmail" placeholder="Новый Email">
+      <div class="password-wrapper">
+        <input type="password" id="confirmPwdForEmail" placeholder="Текущий пароль для подтверждения">
+        <button type="button" class="toggle-password-btn" onclick="togglePasswordVisibility('confirmPwdForEmail', this)">
+          <svg class="icon"><use href="#icon-eye"/></svg>
+        </button>
+      </div>
+      <button class="action-btn" onclick="updateEmail()">Обновить Email</button>
 
       <h3>Изменить Пароль</h3>
       <div class="password-wrapper">
@@ -287,10 +341,6 @@
       </div>
       <button class="action-btn" onclick="updatePassword()">Обновить Пароль</button>
 
-      <h3 style="color:var(--danger);">Удаление аккаунта</h3>
-      <p style="color:var(--text-muted); font-size:13px; line-height:1.4;">Аккаунт будет удалён без возможности восстановления. Ваши созданные серверы тоже будут удалены.</p>
-      <button class="action-btn" onclick="deleteOwnAccount()" style="background:var(--danger);">Удалить мой аккаунт</button>
-
       <button class="action-btn" onclick="closeSettingsModal()" style="background: transparent; color: var(--text-muted); margin-top: 12px;">Закрыть</button>
     </div>
   </div>
@@ -305,17 +355,6 @@
       <button class="action-btn" onclick="createNewServer()" style="margin-bottom: 8px;">Создать новый сервер</button>
       <button class="action-btn" onclick="joinServerById()" style="background: #4e5058;">Войти по ID</button>
       <button class="action-btn" onclick="closeServerModal()" style="background: transparent; color: var(--text-muted); margin-top: 8px;">Отмена</button>
-    </div>
-  </div>
-
-  <!-- Modal Edit Server -->
-  <div id="editServerModal" class="modal-overlay" style="display: none;">
-    <div class="modal">
-      <h2>Редактировать сервер</h2>
-      <input type="text" id="editServerName" placeholder="Название сервера">
-      <input type="text" id="editServerIcon" placeholder="Смайлик сервера (например: 🎮)" maxlength="2" style="text-align:center; font-size:18px;">
-      <button class="action-btn" onclick="saveServerEdits()">Сохранить изменения</button>
-      <button class="action-btn" onclick="closeEditServerModal()" style="background: transparent; color: var(--text-muted); margin-top: 8px;">Отмена</button>
     </div>
   </div>
 
@@ -350,7 +389,8 @@
     </div>
   </div>
 
-  <input type="file" id="fileInput" style="display: none;" onchange="handleFileUpload(event)">
+  <input type="file" id="fileInput" style="display: none;" onchange="handleFileUpload(event)" multiple>
+  <input type="file" id="imageInput" style="display: none;" accept="image/*" onchange="handleFileUpload(event)" multiple>
 
   <div id="app">
     <!-- Server Sidebar -->
@@ -373,13 +413,8 @@
           <div id="currentServerName">Основной #1</div>
           <div class="server-id-badge" id="currentServerId">ID: main</div>
         </div>
-        <div style="display:flex; gap:2px;">
-          <div class="icon-btn" id="editServerBtn" onclick="openEditServerModal()" title="Редактировать сервер" style="display:none;">
-            <svg class="icon"><use href="#icon-settings"/></svg>
-          </div>
-          <div class="delete-srv-btn icon-btn" id="deleteServerBtn" onclick="leaveCurrentServer()" title="Удалить сервер">
-            <svg class="icon" style="color:var(--danger)"><use href="#icon-trash"/></svg>
-          </div>
+        <div class="delete-srv-btn icon-btn" id="deleteServerBtn" onclick="deleteCurrentServer()" title="Удалить сервер">
+          <svg class="icon" style="color:var(--danger)"><use href="#icon-trash"/></svg>
         </div>
       </div>
       <div style="padding: 16px; color: var(--text-muted); font-size: 14px;">💬 Общий чат</div>
@@ -437,11 +472,18 @@
       <div class="chat-messages" id="chatMessages"></div>
 
       <div class="chat-input-container">
+        <div class="attach-menu" id="attachMenu">
+          <button type="button" onclick="openImagePicker()"><svg class="icon"><use href="#icon-image"/></svg><span>Фото и видео</span></button>
+          <button type="button" onclick="openFilePicker()"><svg class="icon"><use href="#icon-file"/></svg><span>Файл</span></button>
+        </div>
         <div class="chat-input-wrapper">
-          <label for="fileInput" class="file-btn" title="Прикрепить файл">
-            <svg class="icon"><use href="#icon-attach"/></svg>
-          </label>
-          <input type="text" id="messageInput" class="chat-input" placeholder="Написать сообщение..." onkeydown="handleKeyPress(event)">
+          <button type="button" class="composer-btn" onclick="toggleAttachMenu(event)" title="Добавить фото или файл" aria-label="Добавить фото или файл">
+            <svg class="icon"><use href="#icon-plus"/></svg>
+          </button>
+          <input type="text" id="messageInput" class="chat-input" placeholder="Написать сообщение..." autocomplete="off" onkeydown="handleKeyPress(event)">
+          <button type="button" class="composer-btn send-btn" onclick="sendCurrentMessage()" title="Отправить" aria-label="Отправить">
+            <svg class="icon"><use href="#icon-send"/></svg>
+          </button>
         </div>
       </div>
     </div>
@@ -468,58 +510,22 @@
     firebase.initializeApp(firebaseConfig);
     const auth = firebase.auth();
     const db = firebase.database();
-    const storage = firebase.storage();
 
     let currentUser = null;
     let currentServerId = 'main';
-    let userServers = [];
-
-    function getServersStorageKey() {
-      return currentUser ? `dubscord_servers_${currentUser.uid}` : 'dubscord_servers_guest';
-    }
-
-    function loadUserServers() {
-      try {
-        userServers = JSON.parse(localStorage.getItem(getServersStorageKey()) || '["main"]');
-      } catch (e) {
-        userServers = ['main'];
-      }
-      if (!userServers.includes('main')) userServers.unshift('main');
-    }
-
-    function saveUserServers() {
-      localStorage.setItem(getServersStorageKey(), JSON.stringify(userServers));
-    }
+    let userServers = JSON.parse(localStorage.getItem('dubscord_servers') || '["main"]');
     let currentAuthMode = 'login';
 
     let allowCalls = localStorage.getItem('dubscord_allow_calls') !== 'false';
     let allowNotifications = localStorage.getItem('dubscord_allow_notifs') !== 'false';
 
     let localStream = null;
-    let remoteStream = null;
-    let peerConnection = null;
-    let currentCallId = null;
-    let currentCallRole = null;
     let isMicMuted = false;
     let isSpeakerPhone = true;
     let activeIncomingCall = null;
     let currentCallType = null;
     let callStartTime = null;
     let callTimerInterval = null;
-    let callStatusRef = null;
-    let callStatusHandler = null;
-    let callerCandidateHandler = null;
-    let calleeCandidateHandler = null;
-    let answerHandler = null;
-    let globalCallsHandlers = {};
-    let currentCallServerId = null;
-
-    const rtcConfig = {
-      iceServers: [
-        { urls: 'stun:stun.l.google.com:19302' },
-        { urls: 'stun:stun1.l.google.com:19302' }
-      ]
-    };
 
     function togglePasswordVisibility(inputId, btn) {
       const pwdInput = document.getElementById(inputId);
@@ -533,8 +539,6 @@
       }
     }
 
-    switchAuthTab('login');
-
     auth.onAuthStateChanged((user) => {
       if (user) {
         currentUser = user;
@@ -546,99 +550,48 @@
       }
     });
 
-    function normalizeUsername(name) {
-      return name.trim().replace(/\s+/g, ' ').toLowerCase();
-    }
-
-    function normalizeUsername(name) {
-      return name.trim().replace(/\s+/g, ' ').toLowerCase();
-    }
-
-    function isValidEmail(email) {
-      return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
-    }
-
     function switchAuthTab(mode) {
       currentAuthMode = mode;
       document.getElementById('tabLogin').classList.toggle('active', mode === 'login');
       document.getElementById('tabRegister').classList.toggle('active', mode === 'register');
+      document.getElementById('regUsernameBox').style.display = mode === 'register' ? 'block' : 'none';
+      document.getElementById('forgotPwdBtn').style.display = mode === 'login' ? 'inline-block' : 'none';
       document.getElementById('authSubmitBtn').innerText = mode === 'login' ? 'Войти' : 'Зарегистрироваться';
-      document.getElementById('authEmail').placeholder = mode === 'login' ? 'Email или старый никнейм...' : 'Email...';
-      document.getElementById('authUsername').style.display = mode === 'register' ? 'block' : 'none';
-      document.getElementById('authPassword').autocomplete = mode === 'login' ? 'current-password' : 'new-password';
-      document.getElementById('forgotPasswordLink').style.display = mode === 'login' ? 'inline-block' : 'none';
     }
 
-    async function handleAuth() {
-      const username = document.getElementById('authUsername').value.trim();
-      const emailInput = document.getElementById('authEmail').value.trim();
-      const password = document.getElementById('authPassword').value;
+    function handleAuth() {
+      const email = document.getElementById('authEmail').value.trim();
+      const password = document.getElementById('authPassword').value.trim();
+
+      if (!email || !password) return alert('Заполните Email и пароль!');
 
       if (currentAuthMode === 'register') {
-        if (!username || !emailInput || !password) return alert('Введите никнейм, email и пароль!');
-        if (username.length < 2 || username.length > 20) return alert('Никнейм должен быть от 2 до 20 символов.');
+        const username = document.getElementById('authUsername').value.trim();
+        if (!username) return alert('Введите никнейм!');
+
+        auth.createUserWithEmailAndPassword(email, password)
+          .then((cred) => {
+            return cred.user.updateProfile({ displayName: username }).then(() => {
+              return db.ref('users/' + cred.user.uid).set({ username: username, email: email });
+            });
+          })
+          .catch(err => alert('Ошибка регистрации: ' + err.message));
       } else {
-        if (!emailInput || !password) return alert('Введите email (или старый никнейм) и пароль!');
-      }
-      if (password.length < 6) return alert('Пароль должен быть минимум 6 символов.');
-
-      try {
-        if (currentAuthMode === 'register') {
-          if (!isValidEmail(emailInput)) return alert('Введите корректный email.');
-          const cred = await auth.createUserWithEmailAndPassword(emailInput, password);
-          await cred.user.updateProfile({ displayName: username });
-          await db.ref(`users/${cred.user.uid}`).set({
-            username: username,
-            usernameNormalized: normalizeUsername(username),
-            email: emailInput.toLowerCase(),
-            authMode: 'email',
-            createdAt: firebase.database.ServerValue.TIMESTAMP
-          });
-          alert('Аккаунт создан!');
-        } else {
-          let authEmail = emailInput;
-          // Compatibility with old accounts that were created before email auth was restored.
-          if (!isValidEmail(authEmail)) authEmail = await usernameToLegacyAuthEmail(emailInput);
-          await auth.signInWithEmailAndPassword(authEmail, password);
-        }
-      } catch (err) {
-        if (err.code === 'auth/email-already-in-use') {
-          alert('Этот email уже зарегистрирован. Войдите в аккаунт.');
-        } else if (err.code === 'auth/user-not-found' || err.code === 'auth/wrong-password' || err.code === 'auth/invalid-credential') {
-          alert('Неверный email/никнейм или пароль.');
-        } else if (err.code === 'auth/invalid-email') {
-          alert('Некорректный email.');
-        } else {
-          alert((currentAuthMode === 'register' ? 'Ошибка регистрации: ' : 'Ошибка входа: ') + err.message);
-        }
+        auth.signInWithEmailAndPassword(email, password)
+          .catch(err => alert('Неверный Email или пароль!'));
       }
     }
 
-    async function usernameToLegacyAuthEmail(username) {
-      const normalized = normalizeUsername(username);
-      const bytes = new TextEncoder().encode(normalized);
-      const digest = await crypto.subtle.digest('SHA-256', bytes);
-      const hex = Array.from(new Uint8Array(digest)).map(b => b.toString(16).padStart(2, '0')).join('');
-      return `u_${hex}@auth.dubscord.local`;
-    }
-
-    async function sendPasswordReset() {
+    function resetPassword() {
       const email = document.getElementById('authEmail').value.trim();
-      if (!isValidEmail(email)) return alert('Введите ваш email в поле Email, затем нажмите «Забыли пароль?».');
-      try {
-        await auth.sendPasswordResetEmail(email);
-        alert('Письмо для восстановления пароля отправлено на ' + email + '.');
-      } catch (err) {
-        if (err.code === 'auth/user-not-found') alert('Аккаунт с таким email не найден.');
-        else alert('Не удалось отправить письмо: ' + err.message);
-      }
+      if (!email) return alert('Введите ваш Email в поле выше, чтобы мы отправили письмо для сброса пароля!');
+      auth.sendPasswordResetEmail(email)
+        .then(() => alert('Письмо для сброса пароля отправлено на ' + email))
+        .catch(err => alert('Ошибка: ' + err.message));
     }
 
     function logout() {
       if (confirm('Выйти из аккаунта?')) {
-        endCall(false);
-        Object.entries(globalCallsHandlers).forEach(([sid, handler]) => db.ref(`servers/${sid}/calls`).off('child_added', handler));
-        globalCallsHandlers = {};
         if (currentUser) {
           db.ref(`servers/${currentServerId}/online/${currentUser.uid}`).remove();
         }
@@ -650,7 +603,7 @@
       document.getElementById('setAllowCalls').checked = allowCalls;
       document.getElementById('setAllowNotifications').checked = allowNotifications;
       document.getElementById('editUsername').value = getUserName();
-      document.getElementById('editEmail').value = currentUser?.email || '';
+      document.getElementById('editEmail').value = currentUser ? currentUser.email : '';
       document.getElementById('settingsModal').style.display = 'flex';
     }
 
@@ -663,39 +616,35 @@
       localStorage.setItem('dubscord_allow_notifs', allowNotifications);
     }
 
-    async function updateUsername() {
+    function updateUsername() {
       const newName = document.getElementById('editUsername').value.trim();
       if (!newName) return alert('Введите никнейм!');
-      if (newName.length < 2 || newName.length > 20) return alert('Никнейм должен быть от 2 до 20 символов.');
-      if (!currentUser) return;
-
-      try {
-        await currentUser.updateProfile({ displayName: newName });
-        await db.ref(`users/${currentUser.uid}`).update({ username: newName, usernameNormalized: normalizeUsername(newName) });
-        initUser();
-        alert('Никнейм успешно изменен!');
-      } catch (err) {
-        alert('Ошибка: ' + err.message);
-      }
+      
+      currentUser.updateProfile({ displayName: newName })
+        .then(() => {
+          db.ref(`users/${currentUser.uid}/username`).set(newName);
+          initUser();
+          alert('Никнейм успешно изменен!');
+        })
+        .catch(err => alert('Ошибка: ' + err.message));
     }
 
-    async function updateEmail() {
-      if (!currentUser) return;
+    function updateEmail() {
       const newEmail = document.getElementById('editEmail').value.trim();
-      if (!isValidEmail(newEmail)) return alert('Введите корректный email.');
-      if (newEmail.toLowerCase() === (currentUser.email || '').toLowerCase()) return alert('Этот email уже установлен.');
-      const password = prompt('Введите текущий пароль для подтверждения смены email:');
-      if (!password) return;
-      try {
-        const credential = firebase.auth.EmailAuthProvider.credential(currentUser.email, password);
-        await currentUser.reauthenticateWithCredential(credential);
-        await currentUser.updateEmail(newEmail);
-        await db.ref(`users/${currentUser.uid}`).update({ email: newEmail.toLowerCase() });
-        document.getElementById('editEmail').value = newEmail;
-        alert('Email успешно изменен.');
-      } catch (err) {
-        alert('Не удалось изменить email: ' + err.message);
-      }
+      const password = document.getElementById('confirmPwdForEmail').value.trim();
+
+      if (!newEmail || !password) return alert('Заполните новый Email и текущий пароль!');
+
+      const credential = firebase.auth.EmailAuthProvider.credential(currentUser.email, password);
+
+      currentUser.reauthenticateWithCredential(credential)
+        .then(() => currentUser.updateEmail(newEmail))
+        .then(() => {
+          db.ref(`users/${currentUser.uid}/email`).set(newEmail);
+          alert('Email успешно изменен!');
+          document.getElementById('confirmPwdForEmail').value = '';
+        })
+        .catch(err => alert('Ошибка при смене Email: ' + err.message));
     }
 
     function updatePassword() {
@@ -717,44 +666,11 @@
         .catch(err => alert('Ошибка при смене пароля: ' + err.message));
     }
 
-    async function deleteOwnAccount() {
-      if (!currentUser) return;
-      const confirmation = prompt('Для удаления аккаунта введите: УДАЛИТЬ');
-      if (confirmation !== 'УДАЛИТЬ') return;
-      const password = prompt('Введите текущий пароль для подтверждения удаления аккаунта:');
-      if (!password) return;
-
-      try {
-        const credential = firebase.auth.EmailAuthProvider.credential(currentUser.email, password);
-        await currentUser.reauthenticateWithCredential(credential);
-
-        const ownedServers = [];
-        const membershipsSnap = await db.ref(`users/${currentUser.uid}/servers`).once('value');
-        const knownServers = Object.keys(membershipsSnap.val() || {}).filter(id => id !== 'main');
-        for (const serverId of knownServers) {
-          const snap = await db.ref(`servers/${serverId}/meta`).once('value');
-          const meta = snap.val() || {};
-          if (meta.createdByUid === currentUser.uid) ownedServers.push(serverId);
-        }
-        for (const serverId of ownedServers) {
-          await db.ref(`servers/${serverId}`).remove();
-        }
-        await db.ref(`users/${currentUser.uid}`).remove();
-        localStorage.removeItem(getServersStorageKey());
-        await currentUser.delete();
-        alert('Аккаунт удалён.');
-      } catch (err) {
-        alert('Не удалось удалить аккаунт: ' + err.message);
-      }
-    }
-
     function getUserName() {
       return (currentUser && currentUser.displayName) ? currentUser.displayName : 'Пользователь';
     }
 
     function initUser() {
-      loadUserServers();
-      if (!userServers.includes(currentServerId)) currentServerId = 'main';
       const name = getUserName();
       document.getElementById('displayUsername').innerText = name;
       document.getElementById('userAvatar').innerText = name.charAt(0).toUpperCase();
@@ -790,121 +706,44 @@
     function openServerModal() { document.getElementById('serverModal').style.display = 'flex'; }
     function closeServerModal() { document.getElementById('serverModal').style.display = 'none'; }
 
-    async function createNewServer() {
+    function createNewServer() {
       const name = document.getElementById('serverInput').value.trim();
       const iconEmoji = document.getElementById('serverIconInput').value.trim() || '💬';
       if (!name) return alert('Введите название!');
-      if (!currentUser) return alert('Сначала войдите в аккаунт.');
-      const newId = 'srv_' + crypto.randomUUID().replace(/-/g, '').slice(0, 12);
+      const newId = 'srv_' + Math.random().toString(36).substr(2, 6);
 
-      const serverData = {
-        meta: { name: name, icon: iconEmoji, createdBy: getUserName(), createdByUid: currentUser.uid, createdAt: firebase.database.ServerValue.TIMESTAMP },
-        members: { [currentUser.uid]: true }
-      };
-
-      try {
-        await db.ref(`servers/${newId}`).set(serverData);
-        if (!userServers.includes(newId)) userServers.push(newId);
-        saveUserServers();
-        await db.ref(`users/${currentUser.uid}/servers/${newId}`).set(true);
-        document.getElementById('serverInput').value = '';
-        document.getElementById('serverIconInput').value = '';
-        closeServerModal();
-        renderServerList();
-        switchServer(newId);
-      } catch (err) {
-        alert('Не удалось создать сервер: ' + err.message);
+      db.ref(`servers/${newId}/meta`).set({ name: name, icon: iconEmoji, createdBy: getUserName() });
+      if (!userServers.includes(newId)) {
+        userServers.push(newId);
+        localStorage.setItem('dubscord_servers', JSON.stringify(userServers));
       }
+      document.getElementById('serverInput').value = '';
+      document.getElementById('serverIconInput').value = '';
+      closeServerModal();
+      renderServerList();
+      switchServer(newId);
     }
 
-    async function joinServerById() {
+    function joinServerById() {
       const id = document.getElementById('serverInput').value.trim();
       if (!id) return alert('Введите ID сервера!');
-      if (!currentUser) return alert('Сначала войдите в аккаунт.');
-
-      try {
-        const snap = await db.ref(`servers/${id}/meta`).once('value');
-        if (!snap.exists()) return alert('Сервер с таким ID не найден.');
-        await db.ref(`servers/${id}/members/${currentUser.uid}`).set(true);
-        await db.ref(`users/${currentUser.uid}/servers/${id}`).set(true);
-        if (!userServers.includes(id)) userServers.push(id);
-        saveUserServers();
-        document.getElementById('serverInput').value = '';
-        closeServerModal();
-        renderServerList();
-        switchServer(id);
-      } catch (err) {
-        alert('Не удалось войти на сервер: ' + err.message);
+      if (!userServers.includes(id)) {
+        userServers.push(id);
+        localStorage.setItem('dubscord_servers', JSON.stringify(userServers));
       }
+      document.getElementById('serverInput').value = '';
+      closeServerModal();
+      renderServerList();
+      switchServer(id);
     }
 
-    async function leaveCurrentServer() {
-      if (currentServerId === 'main') return alert('Основной сервер нельзя покинуть.');
-      if (!currentUser) return;
-      try {
-        const metaSnap = await db.ref(`servers/${currentServerId}/meta`).once('value');
-        const meta = metaSnap.val() || {};
-        if (meta.createdByUid === currentUser.uid) return deleteCurrentServer();
-        if (!confirm('Выйти с этого сервера?')) return;
-        await db.ref(`servers/${currentServerId}/members/${currentUser.uid}`).remove();
-        await db.ref(`users/${currentUser.uid}/servers/${currentServerId}`).remove();
-        userServers = userServers.filter(id => id !== currentServerId);
-        saveUserServers();
-        switchServer('main');
-      } catch (err) {
-        alert('Не удалось выйти с сервера: ' + err.message);
-      }
-    }
-
-    async function deleteCurrentServer() {
+    function deleteCurrentServer() {
       if (currentServerId === 'main') return alert('Основной сервер нельзя удалить!');
-      if (!currentUser) return;
-      try {
-        const metaSnap = await db.ref(`servers/${currentServerId}/meta`).once('value');
-        const meta = metaSnap.val() || {};
-        if (meta.createdByUid !== currentUser.uid) return alert('Удалить сервер может только его создатель.');
-        if (!confirm('Удалить этот сервер? Это удалит его сообщения и участников.')) return;
-        await db.ref(`servers/${currentServerId}`).remove();
-        await db.ref(`users/${currentUser.uid}/servers/${currentServerId}`).remove();
+      if (confirm('Удалить этот сервер?')) {
+        db.ref(`servers/${currentServerId}`).remove();
         userServers = userServers.filter(id => id !== currentServerId);
-        saveUserServers();
+        localStorage.setItem('dubscord_servers', JSON.stringify(userServers));
         switchServer('main');
-      } catch (err) {
-        alert('Не удалось удалить сервер: ' + err.message);
-      }
-    }
-
-    function openEditServerModal() {
-      if (!currentUser || currentServerId === 'main') return;
-      db.ref(`servers/${currentServerId}/meta`).once('value').then(s => {
-        const meta = s.val() || {};
-        if (meta.createdByUid !== currentUser.uid) return alert('Редактировать сервер может только его создатель.');
-        document.getElementById('editServerName').value = meta.name || '';
-        document.getElementById('editServerIcon').value = meta.icon || '💬';
-        document.getElementById('editServerModal').style.display = 'flex';
-      }).catch(err => alert('Не удалось открыть редактирование: ' + err.message));
-    }
-
-    function closeEditServerModal() {
-      document.getElementById('editServerModal').style.display = 'none';
-    }
-
-    async function saveServerEdits() {
-      if (!currentUser || currentServerId === 'main') return;
-      const name = document.getElementById('editServerName').value.trim();
-      const icon = document.getElementById('editServerIcon').value.trim() || '💬';
-      if (!name) return alert('Введите название сервера.');
-      try {
-        const metaSnap = await db.ref(`servers/${currentServerId}/meta`).once('value');
-        const meta = metaSnap.val() || {};
-        if (meta.createdByUid !== currentUser.uid) return alert('Редактировать сервер может только его создатель.');
-        await db.ref(`servers/${currentServerId}/meta`).update({ name, icon, createdBy: getUserName() });
-        closeEditServerModal();
-        renderServerList();
-        switchServer(currentServerId);
-        alert('Сервер обновлён.');
-      } catch (err) {
-        alert('Не удалось сохранить изменения: ' + err.message);
       }
     }
 
@@ -940,33 +779,21 @@
       currentServerId = serverId;
       document.getElementById('currentServerId').innerText = `ID: ${serverId}`;
       const deleteBtn = document.getElementById('deleteServerBtn');
-      const editBtn = document.getElementById('editServerBtn');
 
       if (serverId === 'main') {
         document.getElementById('currentServerName').innerText = 'Главный Сервер';
         document.getElementById('server-btn-main').classList.add('active');
         deleteBtn.style.display = 'none';
-        editBtn.style.display = 'none';
       } else {
         document.getElementById('server-btn-main').classList.remove('active');
         deleteBtn.style.display = 'flex';
-        editBtn.style.display = 'none';
         db.ref(`servers/${serverId}/meta`).once('value', (s) => {
           const meta = s.val() || {};
           document.getElementById('currentServerName').innerText = `${meta.icon || ''} ${meta.name || 'Сервер'}`;
-          const isOwner = meta.createdByUid === currentUser?.uid;
-          deleteBtn.title = isOwner ? 'Удалить сервер' : 'Выйти с сервера';
-          editBtn.style.display = isOwner ? 'flex' : 'none';
-          if (isOwner) {
-            deleteBtn.style.display = 'flex';
-            db.ref(`servers/${serverId}/members/${currentUser.uid}`).set(true).catch(() => {});
-            db.ref(`users/${currentUser.uid}/servers/${serverId}`).set(true).catch(() => {});
-          }
         });
       }
 
       renderServerList();
-      listenGlobalCalls();
       setupPresence();
       listenMessages();
     }
@@ -990,10 +817,13 @@
           msgEl.className = 'message';
           let contentHtml = `<div class="message-text">${escapeHtml(msg.text || '')}</div>`;
           if (msg.file) {
-            const fileUrl = msg.file.url || msg.file.data;
+            const isImage = (msg.file.type || '').startsWith('image/');
+            if (isImage) {
+              contentHtml += `<a href="${msg.file.data}" target="_blank" download="${escapeHtml(msg.file.name)}" class="image-attachment"><img src="${msg.file.data}" alt="${escapeHtml(msg.file.name)}" loading="lazy"></a>`;
+            }
             contentHtml += `
-              <a href="${escapeHtml(fileUrl)}" target="_blank" rel="noopener noreferrer" download="${escapeHtml(msg.file.name)}" class="file-attachment">
-                <svg class="icon"><use href="#icon-attach"/></svg> ${escapeHtml(msg.file.name)} <span>(Открыть)</span>
+              <a href="${msg.file.data}" download="${escapeHtml(msg.file.name)}" class="file-attachment">
+                <svg class="icon"><use href="${isImage ? '#icon-image' : '#icon-attach'}"/></svg> ${escapeHtml(msg.file.name)} <span>(Скачать)</span>
               </a>
             `;
           }
@@ -1018,235 +848,117 @@
 
     function sendMessage(text, fileData = null, isSystem = false) {
       const timeStr = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-      const msgObj = { author: getUserName(), authorUid: currentUser ? currentUser.uid : '', text: text, time: timeStr, isSystem: isSystem };
+      const msgObj = { author: getUserName(), text: text, time: timeStr, isSystem: isSystem };
       if (fileData) msgObj.file = fileData;
       db.ref(`servers/${currentServerId}/messages`).push(msgObj);
     }
 
+    function sendCurrentMessage() {
+      const input = document.getElementById('messageInput');
+      const text = input.value.trim();
+      if (!text) return;
+      sendMessage(text);
+      input.value = '';
+      input.focus();
+    }
+
     function handleKeyPress(e) {
-      if (e.key === 'Enter') {
-        const input = document.getElementById('messageInput');
-        const text = input.value.trim();
-        if (!text) return;
-        sendMessage(text);
-        input.value = '';
+      if (e.key === 'Enter' && !e.shiftKey) {
+        e.preventDefault();
+        sendCurrentMessage();
       }
     }
 
-    async function handleFileUpload(e) {
-      const file = e.target.files[0];
-      if (!file) return;
+    function toggleAttachMenu(e) {
+      if (e) e.stopPropagation();
+      document.getElementById('attachMenu').classList.toggle('open');
+    }
+
+    function closeAttachMenu() {
+      const menu = document.getElementById('attachMenu');
+      if (menu) menu.classList.remove('open');
+    }
+
+    function openImagePicker() {
+      closeAttachMenu();
+      document.getElementById('imageInput').click();
+    }
+
+    function openFilePicker() {
+      closeAttachMenu();
+      document.getElementById('fileInput').click();
+    }
+
+    document.addEventListener('click', function(e) {
+      const menu = document.getElementById('attachMenu');
+      if (menu && menu.classList.contains('open') && !menu.contains(e.target) && !e.target.closest('.composer-btn')) {
+        closeAttachMenu();
+      }
+    });
+
+    function handleFileUpload(e) {
+      const files = Array.from(e.target.files || []);
+      if (!files.length) return;
+
+      const tooLarge = files.find(file => file.size > 5 * 1024 * 1024);
+      if (tooLarge) {
+        alert(`Файл «${tooLarge.name}» больше 5 МБ`);
+        e.target.value = '';
+        return;
+      }
+
+      files.forEach(file => {
+        const reader = new FileReader();
+        reader.onload = function(evt) {
+          sendMessage(`Отправлен файл: ${file.name}`, { name: file.name, data: evt.target.result, type: file.type || 'application/octet-stream' });
+        };
+        reader.readAsDataURL(file);
+      });
       e.target.value = '';
-
-      if (file.size > 25 * 1024 * 1024) {
-        return alert('Размер файла больше 25 МБ');
-      }
-      if (!currentUser) return alert('Сначала войдите в аккаунт');
-
-      try {
-        const safeName = file.name.replace(/[^a-zA-Z0-9а-яА-Я._-]/g, '_');
-        const path = `uploads/${currentServerId}/${currentUser.uid}/${Date.now()}_${safeName}`;
-        const ref = storage.ref(path);
-        await ref.put(file);
-        const url = await ref.getDownloadURL();
-        sendMessage(`Отправлен файл: ${file.name}`, { name: file.name, url: url, path: path, size: file.size, type: file.type });
-      } catch (err) {
-        alert('Не удалось загрузить файл: ' + err.message);
-      }
-    }
-
-    function createPeerConnection(callId, role, callType) {
-      const pc = new RTCPeerConnection(rtcConfig);
-      peerConnection = pc;
-
-      pc.onicecandidate = (event) => {
-        if (!event.candidate) return;
-        const side = role === 'caller' ? 'callerCandidates' : 'calleeCandidates';
-        db.ref(`servers/${currentCallServerId}/calls/${callId}/${side}`).push(event.candidate.toJSON());
-      };
-
-      pc.ontrack = (event) => {
-        remoteStream = event.streams[0];
-        const remoteVideo = document.getElementById('remoteVideo');
-        const remoteAudio = document.getElementById('remoteAudio');
-        if (callType === 'video') {
-          remoteVideo.srcObject = remoteStream;
-          remoteVideo.style.display = 'block';
-        } else {
-          remoteAudio.srcObject = remoteStream;
-          remoteVideo.style.display = 'none';
-        }
-      };
-
-      pc.onconnectionstatechange = () => {
-        if (['failed', 'disconnected', 'closed'].includes(pc.connectionState)) {
-          if (pc.connectionState === 'failed') {
-            try { pc.restartIce(); } catch (e) {}
-          }
-        }
-      };
-
-      if (localStream) {
-        localStream.getTracks().forEach(track => pc.addTrack(track, localStream));
-      }
-      return pc;
     }
 
     function listenGlobalCalls() {
-      Object.entries(globalCallsHandlers).forEach(([sid, handler]) => {
-        db.ref(`servers/${sid}/calls`).off('child_added', handler);
-      });
-      globalCallsHandlers = {};
-      if (!currentUser) return;
-
-      userServers.filter(sid => sid !== 'main').forEach((sid) => {
-        const handler = (snapshot) => {
-          const call = snapshot.val();
-          if (!call || call.status !== 'ringing' || call.callerUid === currentUser?.uid) return;
-          if (!allowCalls || call.timestamp && Date.now() - call.timestamp > 120000) return;
-          activeIncomingCall = { ...call, id: snapshot.key, serverId: sid };
-          document.getElementById('incomingCallText').innerText = `Звонок от ${call.callerName || 'пользователя'}...`;
+      db.ref(`global_calls`).on('child_added', (snapshot) => {
+        const call = snapshot.val();
+        if (call.caller !== getUserName() && allowCalls && call.serverId !== 'main') {
+          activeIncomingCall = call;
+          document.getElementById('incomingCallText').innerText = `Звонок от ${call.caller}...`;
           document.getElementById('incomingCallBox').style.display = 'flex';
-        };
-        globalCallsHandlers[sid] = handler;
-        db.ref(`servers/${sid}/calls`).on('child_added', handler);
+        }
       });
     }
 
     async function startCall(type) {
-      if (!currentUser) return;
-      if (currentServerId === 'main') {
-        return alert('Звонки доступны внутри пользовательских серверов.');
-      }
-      if (!window.RTCPeerConnection || !navigator.mediaDevices?.getUserMedia) {
-        return alert('Этот браузер не поддерживает необходимые функции для звонков.');
+      currentCallType = type;
+      document.getElementById('callModal').style.display = 'flex';
+      document.getElementById('callTitle').innerText = type === 'video' ? 'Видеозвонок...' : 'Голосовой звонок...';
+
+      if (currentServerId !== 'main') {
+        db.ref(`global_calls`).push({
+          caller: getUserName(),
+          serverId: currentServerId,
+          type: type,
+          timestamp: Date.now()
+        });
       }
 
       try {
-        currentCallType = type;
-        currentCallRole = 'caller';
         localStream = await navigator.mediaDevices.getUserMedia({ audio: true, video: type === 'video' });
-        isMicMuted = false;
-        document.getElementById('micBtn').classList.remove('active');
-        document.getElementById('micBtn').querySelector('use').setAttribute('href', '#icon-mic');
+        const remoteVideo = document.getElementById('remoteVideo');
+        if (type === 'video') {
+          remoteVideo.srcObject = localStream;
+          remoteVideo.style.display = 'block';
+        } else {
+          remoteVideo.style.display = 'none';
+        }
 
-        currentCallServerId = currentServerId;
-        const callRef = db.ref(`servers/${currentCallServerId}/calls`).push();
-        currentCallId = callRef.key;
-        await callRef.set({
-          callerUid: currentUser.uid,
-          callerName: getUserName(),
-          serverId: currentServerId,
-          type: type,
-          timestamp: Date.now(),
-          status: 'ringing'
-        });
-
-        document.getElementById('callModal').style.display = 'flex';
-        document.getElementById('callTitle').innerText = type === 'video' ? 'Видеозвонок — ожидание...' : 'Голосовой звонок — ожидание...';
-        document.getElementById('remoteVideo').style.display = type === 'video' ? 'block' : 'none';
-        document.getElementById('remoteVideo').srcObject = null;
-        document.getElementById('remoteAudio').srcObject = null;
-
-        const pc = createPeerConnection(currentCallId, 'caller', type);
-        const offer = await pc.createOffer();
-        await pc.setLocalDescription(offer);
-        await callRef.child('offer').set({ type: offer.type, sdp: offer.sdp });
-
-        answerHandler = (snap) => {
-          const answer = snap.val();
-          if (answer && pc.signalingState !== 'stable') {
-            pc.setRemoteDescription(new RTCSessionDescription(answer)).catch(console.error);
-          }
-        };
-        callRef.child('answer').on('value', answerHandler);
-
-        calleeCandidateHandler = (snap) => {
-          const candidate = snap.val();
-          if (candidate) pc.addIceCandidate(new RTCIceCandidate(candidate)).catch(() => {});
-        };
-        callRef.child('calleeCandidates').on('child_added', calleeCandidateHandler);
-
-        watchCallStatus();
         startCallTimer();
         sendMessage(`Начал(а) ${type === 'video' ? 'видеозвонок' : 'голосовой звонок'}`, null, true);
+
       } catch (err) {
         alert('Ошибка доступа к микрофону/камере: ' + err.message);
         endCall(false);
       }
-    }
-
-    async function acceptIncomingCall() {
-      const call = activeIncomingCall;
-      activeIncomingCall = null;
-      document.getElementById('incomingCallBox').style.display = 'none';
-      if (!call) return;
-
-      try {
-        if (!userServers.includes(call.serverId)) return alert('Сервер звонка недоступен.');
-        switchServer(call.serverId);
-        currentCallId = call.id;
-        currentCallRole = 'callee';
-        currentCallType = call.type || 'audio';
-        localStream = await navigator.mediaDevices.getUserMedia({ audio: true, video: currentCallType === 'video' });
-        isMicMuted = false;
-        document.getElementById('micBtn').classList.remove('active');
-        document.getElementById('micBtn').querySelector('use').setAttribute('href', '#icon-mic');
-
-        currentCallServerId = call.serverId;
-        const callRef = db.ref(`servers/${currentCallServerId}/calls/${currentCallId}`);
-        const snap = await callRef.once('value');
-        const freshCall = snap.val();
-        if (!freshCall || freshCall.status === 'ended' || !freshCall.offer) {
-          throw new Error('Звонок уже завершён или недоступен.');
-        }
-
-        await callRef.update({ status: 'accepted', acceptedByUid: currentUser.uid, acceptedByName: getUserName() });
-        document.getElementById('callModal').style.display = 'flex';
-        document.getElementById('callTitle').innerText = currentCallType === 'video' ? 'Видеозвонок' : 'Голосовой звонок';
-        document.getElementById('remoteVideo').style.display = currentCallType === 'video' ? 'block' : 'none';
-
-        const pc = createPeerConnection(currentCallId, 'callee', currentCallType);
-        await pc.setRemoteDescription(new RTCSessionDescription(freshCall.offer));
-        const answer = await pc.createAnswer();
-        await pc.setLocalDescription(answer);
-        await callRef.child('answer').set({ type: answer.type, sdp: answer.sdp });
-
-        callerCandidateHandler = (candidateSnap) => {
-          const candidate = candidateSnap.val();
-          if (candidate) pc.addIceCandidate(new RTCIceCandidate(candidate)).catch(() => {});
-        };
-        callRef.child('callerCandidates').on('child_added', callerCandidateHandler);
-
-        watchCallStatus();
-        startCallTimer();
-        sendMessage(`Принял(а) звонок`, null, true);
-      } catch (err) {
-        alert('Не удалось принять звонок: ' + err.message);
-        endCall(false);
-      }
-    }
-
-    function watchCallStatus() {
-      if (!currentCallId) return;
-      if (callStatusRef && callStatusHandler) callStatusRef.off('value', callStatusHandler);
-      callStatusRef = db.ref(`servers/${currentCallServerId}/calls/${currentCallId}`);
-      callStatusHandler = (snap) => {
-        const call = snap.val();
-        if (!call || call.status === 'ended') {
-          endCall(false);
-        } else if (call.status === 'accepted') {
-          document.getElementById('callTitle').innerText = currentCallType === 'video' ? 'Видеозвонок' : 'Голосовой звонок';
-        }
-      };
-      callStatusRef.on('value', callStatusHandler);
-    }
-
-    function declineIncomingCall() {
-      const call = activeIncomingCall;
-      activeIncomingCall = null;
-      document.getElementById('incomingCallBox').style.display = 'none';
-      if (call?.id && call.serverId) db.ref(`servers/${call.serverId}/calls/${call.id}`).update({ status: 'ended' });
     }
 
     function startCallTimer() {
@@ -1266,6 +978,19 @@
       document.getElementById('callModal').style.display = 'flex';
     }
 
+    function acceptIncomingCall() {
+      document.getElementById('incomingCallBox').style.display = 'none';
+      if (activeIncomingCall) {
+        switchServer(activeIncomingCall.serverId);
+        startCall(activeIncomingCall.type);
+      }
+    }
+
+    function declineIncomingCall() {
+      document.getElementById('incomingCallBox').style.display = 'none';
+      activeIncomingCall = null;
+    }
+
     function toggleMuteMic() {
       if (!localStream) return;
       isMicMuted = !isMicMuted;
@@ -1277,41 +1002,13 @@
 
     async function toggleAudioOutput() {
       isSpeakerPhone = !isSpeakerPhone;
-      const audio = document.getElementById('remoteAudio');
-      const video = document.getElementById('remoteVideo');
-      const media = audio || video;
-      if (media && typeof media.setSinkId === 'function') {
-        try {
-          await media.setSinkId('default');
-        } catch (e) {}
-      }
-      document.getElementById('speakerBtn').classList.toggle('active', !isSpeakerPhone);
     }
 
     function endCall(sendNotify = true) {
-      const endedCallId = currentCallId;
-      if (callStatusRef && callStatusHandler) callStatusRef.off('value', callStatusHandler);
-      if (endedCallId) {
-        const ref = db.ref(`servers/${currentCallServerId}/calls/${endedCallId}`);
-        if (currentCallRole === 'caller' || sendNotify) ref.update({ status: 'ended', endedAt: Date.now() }).catch(() => {});
-        if (answerHandler) ref.child('answer').off('value', answerHandler);
-        if (callerCandidateHandler) ref.child('callerCandidates').off('child_added', callerCandidateHandler);
-        if (calleeCandidateHandler) ref.child('calleeCandidates').off('child_added', calleeCandidateHandler);
-      }
-
-      if (peerConnection) {
-        peerConnection.ontrack = null;
-        peerConnection.onicecandidate = null;
-        peerConnection.close();
-        peerConnection = null;
-      }
       if (localStream) {
         localStream.getTracks().forEach(track => track.stop());
         localStream = null;
       }
-      remoteStream = null;
-      document.getElementById('remoteVideo').srcObject = null;
-      document.getElementById('remoteAudio').srcObject = null;
 
       if (callTimerInterval) {
         clearInterval(callTimerInterval);
@@ -1320,16 +1017,11 @@
 
       document.getElementById('callModal').style.display = 'none';
       document.getElementById('activeCallBanner').style.display = 'none';
-      document.getElementById('micBtn').classList.remove('active');
-      document.getElementById('micBtn').querySelector('use').setAttribute('href', '#icon-mic');
 
-      currentCallId = null;
-      currentCallRole = null;
-      currentCallType = null;
-      currentCallServerId = null;
-      answerHandler = null;
-      callerCandidateHandler = null;
-      calleeCandidateHandler = null;
+      if (sendNotify && currentCallType) {
+        sendMessage(`Завершил(а) ${currentCallType === 'video' ? 'видеозвонок' : 'звонок'}`, null, true);
+        currentCallType = null;
+      }
     }
 
     function playBeepSound() {
