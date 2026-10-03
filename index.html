@@ -9,6 +9,7 @@
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-storage-compat.js"></script>
 
   <style>
     :root {
@@ -200,6 +201,16 @@
 
     .mobile-menu-btn { display: none; background: none; border: none; color: #fff; cursor: pointer; padding: 4px; }
 
+    /* Stable mobile layout */
+    html, body { overscroll-behavior: none; }
+    #app { min-width: 0; min-height: 0; }
+    .servers-sidebar { width: 64px; min-width: 64px; }
+    .channels-sidebar { width: 240px; min-width: 0; }
+    .chat-area { min-width: 0; min-height: 0; }
+    .chat-messages { min-width: 0; }
+    .chat-input-container { position: relative; z-index: 5; }
+    .server-icon { user-select: none; -webkit-user-select: none; }
+
     @media (max-width: 768px) {
       #app { height: 100dvh; min-height: 100dvh; }
       .mobile-menu-btn { display: flex; align-items: center; justify-content: center; width: 40px; height: 40px; padding: 8px; border-radius: 8px; }
@@ -208,11 +219,11 @@
       .chat-header > div:first-child > span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
       .chat-actions { gap: 2px; }
       .chat-actions .icon-btn { width: 40px; height: 40px; padding: 9px; }
-      .channels-sidebar { position: fixed; left: 72px; top: 0; bottom: 0; height: 100dvh; width: min(82vw, 280px); transform: translateX(-110%); transition: transform 0.2s ease-out; z-index: 20; box-shadow: 8px 0 25px rgba(0,0,0,.35); }
+      .channels-sidebar { position: fixed; left: 64px; top: 0; bottom: 0; height: 100dvh; width: min(82vw, 280px); transform: translateX(-110%); transition: transform 0.2s ease-out; z-index: 20; box-shadow: 8px 0 25px rgba(0,0,0,.35); }
       .channels-sidebar.open { transform: translateX(0); }
       .members-sidebar { position: fixed; right: 0; top: 0; bottom: 0; height: 100dvh; width: min(82vw, 280px); transform: translateX(110%); transition: transform 0.2s ease-out; z-index: 20; box-shadow: -8px 0 25px rgba(0,0,0,.35); }
       .members-sidebar.open { transform: translateX(0); }
-      .mobile-backdrop { left: 72px; z-index: 19; }
+      .mobile-backdrop { left: 64px; z-index: 19; }
       .chat-messages { padding: 12px 10px; gap: 10px; }
       .message { gap: 8px; }
       .message .avatar { width: 34px; height: 34px; min-width: 34px; }
@@ -228,11 +239,12 @@
       .incoming-call-box { top: max(10px, env(safe-area-inset-top)); right: 10px; left: 10px; }
     }
     @media (max-width: 380px) {
-      .servers-sidebar { width: 60px; }
-      .server-icon { width: 42px; height: 42px; }
-      .channels-sidebar { left: 60px; }
-      .mobile-backdrop { left: 60px; }
-      .chat-header { padding-left: 4px; }
+      .servers-sidebar { width: 56px; min-width: 56px; }
+      .server-icon { width: 40px; height: 40px; }
+      .channels-sidebar { left: 56px; }
+      .mobile-backdrop { left: 56px; }
+      .chat-header { padding-left: 2px; }
+      .chat-actions .icon-btn { width: 36px; height: 36px; }
     }
   </style>
 </head>
@@ -413,8 +425,13 @@
           <div id="currentServerName">Основной #1</div>
           <div class="server-id-badge" id="currentServerId">ID: main</div>
         </div>
-        <div class="delete-srv-btn icon-btn" id="deleteServerBtn" onclick="deleteCurrentServer()" title="Удалить сервер">
-          <svg class="icon" style="color:var(--danger)"><use href="#icon-trash"/></svg>
+        <div style="display:flex; align-items:center; gap:4px;">
+          <div class="delete-srv-btn icon-btn" id="leaveServerBtn" onclick="leaveCurrentServer()" title="Покинуть сервер">
+            <svg class="icon" style="color:var(--text-muted)"><use href="#icon-logout"/></svg>
+          </div>
+          <div class="delete-srv-btn icon-btn" id="deleteServerBtn" onclick="deleteCurrentServer()" title="Удалить сервер">
+            <svg class="icon" style="color:var(--danger)"><use href="#icon-trash"/></svg>
+          </div>
         </div>
       </div>
       <div style="padding: 16px; color: var(--text-muted); font-size: 14px;">💬 Общий чат</div>
@@ -510,6 +527,7 @@
     firebase.initializeApp(firebaseConfig);
     const auth = firebase.auth();
     const db = firebase.database();
+    const storage = firebase.storage();
 
     let currentUser = null;
     let currentServerId = 'main';
@@ -706,44 +724,107 @@
     function openServerModal() { document.getElementById('serverModal').style.display = 'flex'; }
     function closeServerModal() { document.getElementById('serverModal').style.display = 'none'; }
 
-    function createNewServer() {
+    async function createNewServer() {
       const name = document.getElementById('serverInput').value.trim();
       const iconEmoji = document.getElementById('serverIconInput').value.trim() || '💬';
       if (!name) return alert('Введите название!');
-      const newId = 'srv_' + Math.random().toString(36).substr(2, 6);
+      if (!currentUser) return alert('Сначала войдите в аккаунт.');
 
-      db.ref(`servers/${newId}/meta`).set({ name: name, icon: iconEmoji, createdBy: getUserName() });
-      if (!userServers.includes(newId)) {
-        userServers.push(newId);
-        localStorage.setItem('dubscord_servers', JSON.stringify(userServers));
+      const newId = 'srv_' + crypto.randomUUID().replace(/-/g, '').slice(0, 12);
+      const serverData = {
+        meta: {
+          name: name,
+          icon: iconEmoji,
+          createdByUid: currentUser.uid,
+          createdAt: firebase.database.ServerValue.TIMESTAMP
+        },
+        members: { [currentUser.uid]: true }
+      };
+
+      try {
+        await db.ref(`servers/${newId}`).set(serverData);
+        rememberServer(newId);
+        clearServerModalInputs();
+        closeServerModal();
+        renderServerList();
+        await switchServer(newId);
+      } catch (err) {
+        alert('Не удалось создать сервер: ' + err.message);
       }
-      document.getElementById('serverInput').value = '';
-      document.getElementById('serverIconInput').value = '';
-      closeServerModal();
-      renderServerList();
-      switchServer(newId);
     }
 
-    function joinServerById() {
+    async function joinServerById() {
       const id = document.getElementById('serverInput').value.trim();
       if (!id) return alert('Введите ID сервера!');
-      if (!userServers.includes(id)) {
-        userServers.push(id);
-        localStorage.setItem('dubscord_servers', JSON.stringify(userServers));
+      if (id === 'main') return switchServer('main');
+      if (!currentUser) return alert('Сначала войдите в аккаунт.');
+
+      try {
+        // Правила Firebase позволяют авторизованному пользователю добавить себя
+        // в members существующего сервера, не открывая ему чтение чужих серверов.
+        await db.ref(`servers/${id}/members/${currentUser.uid}`).set(true);
+        rememberServer(id);
+        clearServerModalInputs();
+        closeServerModal();
+        renderServerList();
+        await switchServer(id);
+      } catch (err) {
+        alert('Не удалось войти на сервер. Проверьте ID сервера.\n\n' + err.message);
       }
-      document.getElementById('serverInput').value = '';
-      closeServerModal();
-      renderServerList();
-      switchServer(id);
     }
 
-    function deleteCurrentServer() {
+    function rememberServer(id) {
+      if (!userServers.includes(id)) userServers.push(id);
+      localStorage.setItem('dubscord_servers', JSON.stringify(userServers));
+    }
+
+    function forgetServer(id) {
+      userServers = userServers.filter(x => x !== id);
+      localStorage.setItem('dubscord_servers', JSON.stringify(userServers));
+    }
+
+    function clearServerModalInputs() {
+      document.getElementById('serverInput').value = '';
+      document.getElementById('serverIconInput').value = '';
+    }
+
+    async function deleteCurrentServer() {
       if (currentServerId === 'main') return alert('Основной сервер нельзя удалить!');
-      if (confirm('Удалить этот сервер?')) {
-        db.ref(`servers/${currentServerId}`).remove();
-        userServers = userServers.filter(id => id !== currentServerId);
-        localStorage.setItem('dubscord_servers', JSON.stringify(userServers));
-        switchServer('main');
+      if (!currentUser) return;
+      if (!confirm('Удалить этот сервер полностью? Это действие нельзя отменить.')) return;
+
+      const id = currentServerId;
+      try {
+        const metaSnap = await db.ref(`servers/${id}/meta`).once('value');
+        const meta = metaSnap.val() || {};
+        if (meta.createdByUid !== currentUser.uid) {
+          return alert('Удалить сервер может только его создатель.');
+        }
+        await db.ref(`servers/${id}`).remove();
+        forgetServer(id);
+        await switchServer('main');
+      } catch (err) {
+        alert('Не удалось удалить сервер: ' + err.message);
+      }
+    }
+
+    async function leaveCurrentServer() {
+      if (currentServerId === 'main') return;
+      if (!currentUser) return;
+      if (!confirm('Покинуть этот сервер?')) return;
+
+      const id = currentServerId;
+      try {
+        const metaSnap = await db.ref(`servers/${id}/meta`).once('value');
+        const meta = metaSnap.val() || {};
+        if (meta.createdByUid === currentUser.uid) {
+          return alert('Создатель сервера не может покинуть его. Удалите сервер или передайте владение.');
+        }
+        await db.ref(`servers/${id}/members/${currentUser.uid}`).remove();
+        forgetServer(id);
+        await switchServer('main');
+      } catch (err) {
+        alert('Не удалось покинуть сервер: ' + err.message);
       }
     }
 
@@ -751,25 +832,48 @@
       const container = document.getElementById('custom-servers-list');
       container.innerHTML = '';
 
-      userServers.forEach(srvId => {
-        if (srvId === 'main') return;
+      userServers.filter(id => id !== 'main').forEach(srvId => {
         const icon = document.createElement('div');
         icon.className = `server-icon ${currentServerId === srvId ? 'active' : ''}`;
-        
-        // Загружаем смайлик из базы данных
-        db.ref(`servers/${srvId}/meta`).once('value', (s) => {
-          const meta = s.val() || {};
-          icon.innerText = meta.icon || srvId.substr(4, 2).toUpperCase();
-          if (meta.name) icon.title = `${meta.name} (ID: ${srvId})`;
-        });
-
+        icon.innerText = '•';
+        icon.setAttribute('aria-label', 'Сервер');
         icon.onclick = () => switchServer(srvId);
         container.appendChild(icon);
+
+        db.ref(`servers/${srvId}/meta`).once('value').then((s) => {
+          if (!s.exists()) {
+            forgetServer(srvId);
+            if (currentServerId === srvId) switchServer('main');
+            else renderServerList();
+            return;
+          }
+          const meta = s.val() || {};
+          icon.innerText = meta.icon || '💬';
+          icon.title = `${meta.name || 'Сервер'} (ID: ${srvId})`;
+        }).catch(() => {
+          // Не удаляем сервер из списка только из-за временной сетевой ошибки.
+        });
       });
     }
 
-    function switchServer(serverId) {
+    async function switchServer(serverId) {
       closeMobileDrawers();
+      closeAttachMenu();
+      if (!currentUser) return;
+
+      if (serverId !== 'main') {
+        try {
+          const memberSnap = await db.ref(`servers/${serverId}/members/${currentUser.uid}`).once('value');
+          if (!memberSnap.val()) {
+            forgetServer(serverId);
+            renderServerList();
+            return alert('Вы больше не состоите в этом сервере.');
+          }
+        } catch (err) {
+          return alert('Не удалось открыть сервер: ' + err.message);
+        }
+      }
+
       if (currentUser) {
         db.ref(`servers/${currentServerId}/online/${currentUser.uid}`).remove();
       }
@@ -779,18 +883,27 @@
       currentServerId = serverId;
       document.getElementById('currentServerId').innerText = `ID: ${serverId}`;
       const deleteBtn = document.getElementById('deleteServerBtn');
+      const leaveBtn = document.getElementById('leaveServerBtn');
 
       if (serverId === 'main') {
         document.getElementById('currentServerName').innerText = 'Главный Сервер';
         document.getElementById('server-btn-main').classList.add('active');
         deleteBtn.style.display = 'none';
+        leaveBtn.style.display = 'none';
       } else {
         document.getElementById('server-btn-main').classList.remove('active');
-        deleteBtn.style.display = 'flex';
-        db.ref(`servers/${serverId}/meta`).once('value', (s) => {
+        try {
+          const s = await db.ref(`servers/${serverId}/meta`).once('value');
           const meta = s.val() || {};
-          document.getElementById('currentServerName').innerText = `${meta.icon || ''} ${meta.name || 'Сервер'}`;
-        });
+          document.getElementById('currentServerName').innerText = `${meta.icon || ''} ${meta.name || 'Сервер'}`.trim();
+          const isOwner = meta.createdByUid === currentUser.uid;
+          deleteBtn.style.display = isOwner ? 'flex' : 'none';
+          leaveBtn.style.display = isOwner ? 'none' : 'flex';
+        } catch (err) {
+          forgetServer(serverId);
+          renderServerList();
+          return switchServer('main');
+        }
       }
 
       renderServerList();
@@ -846,19 +959,30 @@
       });
     }
 
-    function sendMessage(text, fileData = null, isSystem = false) {
+    async function sendMessage(text, fileData = null, isSystem = false) {
+      if (!currentUser) return;
       const timeStr = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-      const msgObj = { author: getUserName(), text: text, time: timeStr, isSystem: isSystem };
+      const msgObj = {
+        author: getUserName(),
+        authorUid: currentUser.uid,
+        text: text || '',
+        time: timeStr,
+        isSystem: !!isSystem
+      };
       if (fileData) msgObj.file = fileData;
-      db.ref(`servers/${currentServerId}/messages`).push(msgObj);
+      try {
+        await db.ref(`servers/${currentServerId}/messages`).push(msgObj);
+      } catch (err) {
+        alert('Не удалось отправить сообщение: ' + err.message);
+      }
     }
 
     function sendCurrentMessage() {
       const input = document.getElementById('messageInput');
       const text = input.value.trim();
       if (!text) return;
-      sendMessage(text);
       input.value = '';
+      sendMessage(text);
       input.focus();
     }
 
@@ -896,25 +1020,30 @@
       }
     });
 
-    function handleFileUpload(e) {
+    async function handleFileUpload(e) {
       const files = Array.from(e.target.files || []);
-      if (!files.length) return;
-
-      const tooLarge = files.find(file => file.size > 5 * 1024 * 1024);
-      if (tooLarge) {
-        alert(`Файл «${tooLarge.name}» больше 5 МБ`);
-        e.target.value = '';
-        return;
-      }
-
-      files.forEach(file => {
-        const reader = new FileReader();
-        reader.onload = function(evt) {
-          sendMessage(`Отправлен файл: ${file.name}`, { name: file.name, data: evt.target.result, type: file.type || 'application/octet-stream' });
-        };
-        reader.readAsDataURL(file);
-      });
       e.target.value = '';
+      if (!files.length || !currentUser) return;
+
+      for (const file of files) {
+        if (file.size > 25 * 1024 * 1024) {
+          alert(`Файл «${file.name}» больше 25 МБ`);
+          continue;
+        }
+        try {
+          const safeName = `${Date.now()}_${file.name.replace(/[^a-zA-Z0-9а-яА-Я._-]/g, '_')}`;
+          const ref = storage.ref(`uploads/${currentServerId}/${currentUser.uid}/${safeName}`);
+          const snap = await ref.put(file);
+          const url = await snap.ref.getDownloadURL();
+          await sendMessage(`Отправлен файл: ${file.name}`, {
+            name: file.name,
+            data: url,
+            type: file.type || 'application/octet-stream'
+          });
+        } catch (err) {
+          alert(`Не удалось загрузить «${file.name}»: ${err.message}`);
+        }
+      }
     }
 
     function listenGlobalCalls() {
